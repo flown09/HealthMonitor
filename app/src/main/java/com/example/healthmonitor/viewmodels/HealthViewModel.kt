@@ -152,14 +152,23 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 )
                 repository.insertHealthData(healthData)
 
-                // Перезагружаем данные
+                // Обновляем targetWeight в профиле на новый вес
                 val userId = _currentUser.value?.id ?: "user_1"
+                val currentUser = _currentUser.value
+                if (currentUser != null) {
+                    val updatedUser = currentUser.copy(targetWeight = weight)
+                    repository.updateUser(updatedUser)
+                    _currentUser.value = updatedUser
+                }
+
+                // Перезагружаем данные
                 loadHealthData(userId)
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error adding health data: ${e.message}")
             }
         }
     }
+
 
     fun addNutritionData(food: Food, portionGrams: Float, mealType: String) {
         viewModelScope.launch(Dispatchers.IO) {
