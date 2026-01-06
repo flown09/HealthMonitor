@@ -85,37 +85,6 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             BMICard(viewModel, user)
             WaterCard(user)
         }
-
-        // Последние показатели здоровья
-        if (healthDataList.isNotEmpty()) {
-            Text(
-                text = "История",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                healthDataList.forEach { health ->
-                    HealthDataItemCard(health)
-                }
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "Нет данных о здоровье",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
