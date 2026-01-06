@@ -1,7 +1,9 @@
 package com.example.healthmonitor.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,6 +82,9 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             }
         }
 
+        // Карточка отслеживания веса
+        WeightTrackingCard(healthDataList, viewModel)
+
         // BMI Карточка
         currentUser?.let { user ->
             BMICard(viewModel, user)
@@ -89,45 +94,193 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
 }
 
 @Composable
-fun HealthDataItemCard(health: HealthData) {
+fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewModel) {
+    val sortedData = healthDataList.sortedBy { it.date }
+    val lastWeights = sortedData.takeLast(7) // Последние 7 записей
+
+    val currentWeight = sortedData.lastOrNull()?.weight ?: 0f
+    val previousWeight = sortedData.getOrNull(sortedData.size - 2)?.weight ?: currentWeight
+    val weightChange = currentWeight - previousWeight
+
+    var showWeightDialog by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
-                Column {
+                Text(
+                    text = "Отслеживание веса",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Button(
+                    onClick = { showWeightDialog = true },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("+ Добавить", fontSize = 12.sp)
+                }
+            }
+
+            if (lastWeights.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Текущий вес", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = String.format("%.1f кг", currentWeight),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = androidx.compose.ui.Alignment.End
+                    ) {
+                        Text("Изменение", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val changeColor = if (weightChange <= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        val changeSymbol = if (weightChange <= 0) "↓" else "↑"
+                        Text(
+                            text = "$changeSymbol ${String.format("%.1f кг", kotlin.math.abs(weightChange))}",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = changeColor
+                        )
+                    }
+                }
+
+                // Мини-график (столбцы)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.Bottom
+                ) {
+                    val minWeight = lastWeights.minOf { it.weight } - 2
+                    val maxWeight = lastWeights.maxOf { it.weight } + 2
+                    val range = maxWeight - minWeight
+
+                    lastWeights.forEach { data ->
+                        val normalizedHeight = ((data.weight - minWeight) / range * 80).coerceIn(5f, 80f)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(normalizedHeight.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Последние ${lastWeights.size} записей",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
                     Text(
-                        text = "Вес: ${health.weight} кг",
+                        text = "Нет данных о весе",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Пульс: ${health.heartRate} уд/мин",
-                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    text = "⚕️",
-                    fontSize = 28.sp
-                )
             }
-
-            Text(
-                text = "Давление: ${health.bloodPressureSystolic}/${health.bloodPressureDiastolic} | Сон: ${health.sleepHours}ч | Вода: ${health.waterIntakeL}л",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
+
+    if (showWeightDialog) {
+        AddWeightDialog(
+            onDismiss = { showWeightDialog = false },
+            onAdd = { weight ->
+                viewModel.addHealthData(
+                    weight = weight,
+                    heartRate = 0,
+                    sys = 0,
+                    dia = 0,
+                    steps = 0,
+                    sleep = 0f,
+                    water = 0f
+                )
+                showWeightDialog = false
+            }
+        )
+    }
 }
+
+@Composable
+fun AddWeightDialog(
+    onDismiss: () -> Unit,
+    onAdd: (Float) -> Unit
+) {
+    var weightVal by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Добавить вес") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Введите свой вес в килограммах",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextField(
+                    value = weightVal,
+                    onValueChange = { weightVal = it },
+                    label = { Text("Вес (кг)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onAdd(weightVal.toFloatOrNull() ?: 70f)
+                }
+            ) {
+                Text("Добавить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    )
+}
+
+
 
 @Composable
 fun BMICard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.User) {

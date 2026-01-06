@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.compose.foundation)
     kapt(libs.androidx.room.compiler)
 
     // Charts
