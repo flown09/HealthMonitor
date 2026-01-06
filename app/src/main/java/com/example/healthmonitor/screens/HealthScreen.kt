@@ -82,8 +82,8 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             }
         }
 
-        // Карточка отслеживания веса
-        WeightTrackingCard(healthDataList, viewModel)
+        // Карточка отслеживания веса (передаем currentUser)
+        WeightTrackingCard(healthDataList, viewModel, currentUser)
 
         // BMI Карточка
         currentUser?.let { user ->
@@ -93,12 +93,14 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
     }
 }
 
+
 @Composable
-fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewModel) {
+fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewModel, currentUser: com.example.healthmonitor.models.User?) {
     val sortedData = healthDataList.sortedBy { it.date }
     val lastWeights = sortedData.takeLast(7) // Последние 7 записей
 
-    val currentWeight = sortedData.lastOrNull()?.weight ?: 0f
+    // Используем целевой вес из профиля как текущий вес
+    val currentWeight = currentUser?.targetWeight ?: (sortedData.lastOrNull()?.weight ?: 0f)
     val previousWeight = sortedData.getOrNull(sortedData.size - 2)?.weight ?: currentWeight
     val weightChange = currentWeight - previousWeight
 
@@ -134,7 +136,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                 }
             }
 
-            if (lastWeights.isNotEmpty()) {
+            if (lastWeights.isNotEmpty() || currentWeight > 0) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -167,37 +169,39 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                 }
 
                 // Мини-график (столбцы)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.Bottom
-                ) {
-                    val minWeight = lastWeights.minOf { it.weight } - 2
-                    val maxWeight = lastWeights.maxOf { it.weight } + 2
-                    val range = maxWeight - minWeight
+                if (lastWeights.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.Bottom
+                    ) {
+                        val minWeight = lastWeights.minOf { it.weight } - 2
+                        val maxWeight = lastWeights.maxOf { it.weight } + 2
+                        val range = maxWeight - minWeight
 
-                    lastWeights.forEach { data ->
-                        val normalizedHeight = ((data.weight - minWeight) / range * 80).coerceIn(5f, 80f)
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(normalizedHeight.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = RoundedCornerShape(4.dp)
-                                )
-                        )
+                        lastWeights.forEach { data ->
+                            val normalizedHeight = ((data.weight - minWeight) / range * 80).coerceIn(5f, 80f)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(normalizedHeight.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                            )
+                        }
                     }
-                }
 
-                Text(
-                    text = "Последние ${lastWeights.size} записей",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    Text(
+                        text = "Последние ${lastWeights.size} записей",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             } else {
                 Box(
                     modifier = Modifier
@@ -233,6 +237,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
         )
     }
 }
+
 
 @Composable
 fun AddWeightDialog(
