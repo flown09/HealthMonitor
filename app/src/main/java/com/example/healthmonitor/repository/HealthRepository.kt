@@ -34,6 +34,11 @@ class HealthRepository(private val database: HealthDatabase) {
         database.healthDataDao().insertHealthData(data)
     }
 
+    suspend fun deleteHealthData(healthData: HealthData) {
+        database.healthDataDao().deleteHealthData(healthData)
+    }
+
+
     suspend fun updateHealthData(data: HealthData) = withContext(Dispatchers.IO) {
         database.healthDataDao().updateHealthData(data)
     }

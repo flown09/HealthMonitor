@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import android.util.Log
+import kotlinx.coroutines.delay
 
 
 class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
@@ -294,4 +295,20 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
+    fun deleteHealthData(healthData: HealthData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.deleteHealthData(healthData)
+                val userId = _currentUser.value?.id ?: "user_1"
+                // Небольшая задержка для уверенности, что данные удалены
+                delay(100)
+                loadHealthData(userId)
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error deleting health data: ${e.message}")
+            }
+        }
+    }
+
+
 }

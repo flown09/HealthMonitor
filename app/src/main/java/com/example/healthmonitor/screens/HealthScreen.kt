@@ -349,16 +349,44 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                         }
                         showWeightDetailsDialog = false
                         selectedWeightIndex = -1
+                        selectedWeightData = null
                     }
                 ) {
                     Text("Сохранить")
                 }
             },
             dismissButton = {
-                Button(
-                    onClick = { showWeightDetailsDialog = false }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Отмена")
+                    Button(
+                        onClick = {
+                            showWeightDetailsDialog = false
+                            selectedWeightIndex = -1
+                            selectedWeightData = null
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Отмена")
+                    }
+                    Button(
+                        onClick = {
+                            selectedWeightData?.let { data ->
+                                viewModel.deleteHealthData(data)
+                                // Сразу закрываем диалог и очищаем выделение
+                                showWeightDetailsDialog = false
+                                selectedWeightIndex = -1
+                                selectedWeightData = null
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Удалить")
+                    }
                 }
             }
         )
