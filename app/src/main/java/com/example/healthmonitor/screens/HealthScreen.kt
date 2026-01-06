@@ -21,8 +21,6 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
     val currentSteps by stepCounter.stepCount.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
 
-    var showAddDialog by remember { mutableStateOf(false) }
-
     val stepGoal = currentUser?.dailyStepGoal ?: 10000
 
     Column(
@@ -32,25 +30,12 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Здоровье",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Button(
-                onClick = { showAddDialog = true },
-                modifier = Modifier.height(40.dp)
-            ) {
-                Text("Добавить")
-            }
-        }
+        Text(
+            text = "Здоровье",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
         // Карточка с шагами
         Card(
@@ -106,10 +91,10 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(healthDataList) { health ->
+                healthDataList.forEach { health ->
                     HealthDataItemCard(health)
                 }
             }
@@ -128,17 +113,9 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             }
         }
     }
-
-    if (showAddDialog) {
-        AddHealthDataDialog(
-            onDismiss = { showAddDialog = false },
-            onAdd = { weight, heartRate, sys, dia, steps, sleep, water ->
-                viewModel.addHealthData(weight, heartRate, sys, dia, steps, sleep, water)
-                showAddDialog = false
-            }
-        )
-    }
 }
+
+
 
 
 @Composable
