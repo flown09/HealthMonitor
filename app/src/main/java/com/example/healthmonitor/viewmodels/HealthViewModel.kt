@@ -11,29 +11,26 @@ import com.example.healthmonitor.utils.HealthCalculations
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import kotlinx.coroutines.Dispatchers
+import android.util.Log
+
 
 class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
-    // User State
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
-    // Foods State
     private val _foods = MutableStateFlow<List<Food>>(emptyList())
     val foods: StateFlow<List<Food>> = _foods.asStateFlow()
 
-    // Health Data State
     private val _healthDataList = MutableStateFlow<List<HealthData>>(emptyList())
     val healthDataList: StateFlow<List<HealthData>> = _healthDataList.asStateFlow()
 
-    // Nutrition Data State
     private val _nutritionDataList = MutableStateFlow<List<NutritionData>>(emptyList())
     val nutritionDataList: StateFlow<List<NutritionData>> = _nutritionDataList.asStateFlow()
 
-    // Today's calories
     private val _todayCalories = MutableStateFlow(0)
     val todayCalories: StateFlow<Int> = _todayCalories.asStateFlow()
 
@@ -42,154 +39,174 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     }
 
     private fun loadInitialData() {
-        viewModelScope.launch {
-            // Сначала загружаем существующего пользователя
-            repository.getAllUsers().collect { users ->
-                if (users.isNotEmpty()) {
-                    _currentUser.value = users.first()
-                    loadHealthData(users.first().id)
-                    loadNutritionData(users.first().id)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Получаем пользователя
+                val users = try {
+                    repository.getAllUsers()
+                } catch (e: Exception) {
+                    Log.e("HealthViewModel", "Error getting users: ${e.message}")
+                    null
+                }
+
+                if (users != null) {
+                    users.collect { usersList ->
+                        if (usersList.isNotEmpty()) {
+                            val user = usersList.first()
+                            _currentUser.value = user
+
+                            // Загружаем данные асинхронно
+                            loadHealthData(user.id)
+                            loadNutritionData(user.id)
+                            loadFoods()
+                        } else {
+                            createDefaultUser()
+                        }
+                    }
                 } else {
-                    // Если нет пользователя - создаем нового
-                    val testUser = User(
-                        id = "user_1",
-                        name = "Иван",
-                        age = 30,
-                        gender = "male",
-                        heightCm = 180f,
-                        targetWeight = 75f,
-                        activityLevel = "moderate",
-                        weightGoal = "maintain"
-                    )
-                    repository.insertUser(testUser)
-                    _currentUser.value = testUser
-                    loadHealthData("user_1")
-                    loadNutritionData("user_1")
+                    createDefaultUser()
                 }
-            }
-
-            loadFoods()
-        }
-    }
-
-
-    private fun loadFoods() {
-        viewModelScope.launch {
-            repository.getAllFoods().collect { foods ->
-                _foods.value = foods
-
-                // Если продуктов нет - добавляем предзаполненные
-                if (foods.isEmpty()) {
-                    insertDefaultFoods()
-                }
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error in loadInitialData: ${e.message}", e)
+                createDefaultUser()
             }
         }
     }
 
-    private fun insertDefaultFoods() {
-        viewModelScope.launch {
-            val defaultFoods = listOf(
-                // Мясо
-                Food("f1", "Курица (грудка)", 165, 31f, 0f, 3.6f, 0f, "meat"),
-                Food("f2", "Говядина (нежирная)", 250, 26f, 0f, 17f, 0f, "meat"),
-                Food("f3", "Рыба (лосось)", 208, 20f, 0f, 13f, 0f, "meat"),
-
-                // Молочные продукты
-                Food("f4", "Молоко (обезжиренное)", 30, 3.2f, 4.8f, 0.1f, 0f, "dairy"),
-                Food("f5", "Йогурт (греческий)", 59, 10f, 3.3f, 0.5f, 0f, "dairy"),
-                Food("f6", "Сыр (твердый)", 402, 25f, 1.3f, 33f, 0f, "dairy"),
-
-                // Овощи
-                Food("f7", "Брокколи", 34, 2.8f, 7f, 0.4f, 2.4f, "vegetables"),
-                Food("f8", "Морковь", 41, 0.9f, 10f, 0.2f, 2.8f, "vegetables"),
-                Food("f9", "Помидоры", 18, 0.9f, 3.9f, 0.2f, 1.2f, "vegetables"),
-
-                // Фрукты
-                Food("f10", "Банан", 89, 1.1f, 23f, 0.3f, 2.6f, "fruits"),
-                Food("f11", "Яблоко", 52, 0.3f, 14f, 0.2f, 2.4f, "fruits"),
-                Food("f12", "Апельсин", 47, 0.9f, 12f, 0.1f, 2.4f, "fruits"),
-
-                // Зерна
-                Food("f13", "Рис (белый)", 130, 2.7f, 28f, 0.3f, 0.4f, "grains"),
-                Food("f14", "Хлеб (ржаной)", 259, 8.5f, 49f, 3.3f, 7f, "grains"),
-                Food("f15", "Овсянка", 389, 17f, 67f, 7f, 10.6f, "grains"),
-            )
-            repository.insertFoods(defaultFoods)
+    private fun createDefaultUser() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val testUser = User(
+                    id = "user_1",
+                    name = "-",
+                    age = 18,
+                    gender = "male",
+                    heightCm = 180f,
+                    targetWeight = 75f,
+                    activityLevel = "moderate",
+                    weightGoal = "maintain"
+                )
+                repository.insertUser(testUser)
+                _currentUser.value = testUser
+                loadHealthData("user_1")
+                loadNutritionData("user_1")
+                loadFoods()
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error creating default user: ${e.message}", e)
+            }
         }
     }
 
     private fun loadHealthData(userId: String) {
-        viewModelScope.launch {
-            repository.getHealthDataByUser(userId).collect { data ->
-                _healthDataList.value = data
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.getHealthDataByUser(userId).collect { data ->
+                    _healthDataList.value = data
+                }
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error loading health data: ${e.message}")
+                _healthDataList.value = emptyList()
             }
         }
     }
 
     private fun loadNutritionData(userId: String) {
-        viewModelScope.launch {
-            repository.getNutritionDataByDate(userId, getTodayTimestamp()).collect { data ->
-                _nutritionDataList.value = data
-                val totalCalories = data.sumOf { it.calories }
-                _todayCalories.value = totalCalories
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.getNutritionDataByUser(userId).collect { data ->
+                    _nutritionDataList.value = data
+                }
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error loading nutrition data: ${e.message}")
+                _nutritionDataList.value = emptyList()
             }
         }
     }
 
-    // Add health data
+    private fun loadFoods() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.getAllFoods().collect { foodsList ->
+                    _foods.value = foodsList
+                }
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error loading foods: ${e.message}")
+                _foods.value = emptyList()
+            }
+        }
+    }
+
     fun addHealthData(weight: Float, heartRate: Int, sys: Int, dia: Int, steps: Int, sleep: Float, water: Float) {
-        viewModelScope.launch {
-            val healthData = HealthData(
-                userId = _currentUser.value?.id ?: "user_1",
-                date = getTodayTimestamp(),
-                weight = weight,
-                heartRate = heartRate,
-                bloodPressureSystolic = sys,
-                bloodPressureDiastolic = dia,
-                steps = steps,
-                sleepHours = sleep,
-                waterIntakeL = water
-            )
-            repository.insertHealthData(healthData)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val healthData = HealthData(
+                    userId = _currentUser.value?.id ?: "user_1",
+                    date = getTodayTimestamp(),
+                    weight = weight,
+                    heartRate = heartRate,
+                    bloodPressureSystolic = sys,
+                    bloodPressureDiastolic = dia,
+                    steps = steps,
+                    sleepHours = sleep,
+                    waterIntakeL = water
+                )
+                repository.insertHealthData(healthData)
+
+                // Перезагружаем данные
+                val userId = _currentUser.value?.id ?: "user_1"
+                loadHealthData(userId)
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error adding health data: ${e.message}")
+            }
         }
     }
 
-    // Add nutrition data
     fun addNutritionData(food: Food, portionGrams: Float, mealType: String) {
-        viewModelScope.launch {
-            val caloriesForPortion = (food.calories * portionGrams) / 100
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val caloriesForPortion = (food.calories * portionGrams) / 100
 
-            val nutritionData = NutritionData(
-                userId = _currentUser.value?.id ?: "user_1",
-                date = getTodayTimestamp(),
-                mealType = mealType,
-                foodName = food.name,
-                calories = caloriesForPortion.toInt(),
-                protein = (food.protein * portionGrams) / 100,
-                carbs = (food.carbs * portionGrams) / 100,
-                fat = (food.fat * portionGrams) / 100,
-                fiber = (food.fiber * portionGrams) / 100
-            )
-            repository.insertNutritionData(nutritionData)
+                val nutritionData = NutritionData(
+                    userId = _currentUser.value?.id ?: "user_1",
+                    date = getTodayTimestamp(),
+                    mealType = mealType,
+                    foodName = food.name,
+                    calories = caloriesForPortion.toInt(),
+                    protein = (food.protein * portionGrams) / 100,
+                    carbs = (food.carbs * portionGrams) / 100,
+                    fat = (food.fat * portionGrams) / 100,
+                    fiber = (food.fiber * portionGrams) / 100
+                )
+                repository.insertNutritionData(nutritionData)
+
+                // Перезагружаем данные
+                val userId = _currentUser.value?.id ?: "user_1"
+                loadNutritionData(userId)
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error adding nutrition data: ${e.message}")
+            }
         }
     }
 
-    // Add new food
     fun addFood(name: String, calories: Int, protein: Float, carbs: Float, fat: Float, category: String) {
-        viewModelScope.launch {
-            val newFood = Food(
-                name = name,
-                calories = calories,
-                protein = protein,
-                carbs = carbs,
-                fat = fat,
-                category = category
-            )
-            repository.insertFood(newFood)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val newFood = Food(
+                    name = name,
+                    calories = calories,
+                    protein = protein,
+                    carbs = carbs,
+                    fat = fat,
+                    category = category
+                )
+                repository.insertFood(newFood)
+                loadFoods()
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error adding food: ${e.message}")
+            }
         }
     }
 
-    // Вспомогательные функции
     private fun getTodayTimestamp(): Long {
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -228,30 +245,33 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
         val dailyCalories = bmr * multiplier
 
-        // Применяем коэффициент в зависимости от цели
         return when(user.weightGoal) {
-            "lose" -> (dailyCalories * 0.85f).toInt()     // Дефицит 15%
-            "maintain" -> dailyCalories.toInt()             // Без изменений
-            "gain" -> (dailyCalories * 1.15f).toInt()      // Профицит 15%
+            "lose" -> (dailyCalories * 0.85f).toInt()
+            "maintain" -> dailyCalories.toInt()
+            "gain" -> (dailyCalories * 1.15f).toInt()
             else -> dailyCalories.toInt()
         }
     }
 
-    fun updateUser(name: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String) {
-        viewModelScope.launch {
-            val updatedUser = _currentUser.value?.copy(
-                name = name,
-                age = age,
-                heightCm = heightCm,
-                targetWeight = targetWeight,
-                activityLevel = activityLevel,
-                weightGoal = weightGoal
-            )
-            updatedUser?.let {
-                repository.updateUser(it)
-                _currentUser.value = it
+    fun updateUser(name: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String, dailyStepGoal: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val updatedUser = _currentUser.value?.copy(
+                    name = name,
+                    age = age,
+                    heightCm = heightCm,
+                    targetWeight = targetWeight,
+                    activityLevel = activityLevel,
+                    weightGoal = weightGoal,
+                    dailyStepGoal = dailyStepGoal
+                )
+                updatedUser?.let {
+                    repository.updateUser(it)
+                    _currentUser.value = it
+                }
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error updating user: ${e.message}")
             }
         }
     }
-
 }

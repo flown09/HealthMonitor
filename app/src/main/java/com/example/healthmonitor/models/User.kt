@@ -14,5 +14,6 @@ data class User(
     val heightCm: Float,
     val targetWeight: Float,
     val activityLevel: String,
-    val weightGoal: String = "maintain"
+    val weightGoal: String = "maintain",
+    val dailyStepGoal: Int = 10000
 )

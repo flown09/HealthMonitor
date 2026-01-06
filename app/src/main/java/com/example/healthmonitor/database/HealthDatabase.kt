@@ -11,7 +11,7 @@ import com.example.healthmonitor.models.Food
 
 @Database(
     entities = [User::class, HealthData::class, NutritionData::class, Food::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class HealthDatabase : RoomDatabase() {

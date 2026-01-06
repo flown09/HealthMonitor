@@ -64,13 +64,15 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             EditProfileDialog(
                 user = user,
                 onDismiss = { showEditDialog = false },
-                onSave = { name, age, heightCm, targetWeight, activityLevel, weightGoal ->
-                    viewModel.updateUser(name, age, heightCm, targetWeight, activityLevel, weightGoal)
+                onSave = { name, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal ->
+                    viewModel.updateUser(name, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal)
                     showEditDialog = false
                 }
             )
         }
     }
+
+
 }
 
 @Composable
@@ -228,7 +230,9 @@ fun CaloriesCard(viewModel: HealthViewModel, user: User) {
 
 @Composable
 fun WaterCard(user: User) {
-    val waterNorm = String.format("%.1f", (user.targetWeight * 35) / 1000)
+    // Используем точку как разделитель, независимо от локали
+    val waterNormFloat = (user.targetWeight * 35) / 1000
+    val waterNorm = String.format(java.util.Locale.US, "%.1f", waterNormFloat)
 
     Card(
         modifier = Modifier
@@ -254,13 +258,14 @@ fun WaterCard(user: User) {
             )
 
             Text(
-                text = "Это примерно ${(waterNorm.toFloat() * 1000).toInt() / 250} стаканов по 250мл",
+                text = "Это примерно ${(waterNormFloat * 1000).toInt() / 250} стаканов по 250мл",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
+
 
 @Composable
 fun LastHealthDataCard(healthDataList: List<com.example.healthmonitor.models.HealthData>) {
@@ -364,7 +369,7 @@ fun MetricBox(label: String, value: String, unit: String) {
 fun EditProfileDialog(
     user: User,
     onDismiss: () -> Unit,
-    onSave: (String, Int, Float, Float, String, String) -> Unit
+    onSave: (String, Int, Float, Float, String, String, Int) -> Unit
 ) {
     var nameVal by remember { mutableStateOf(user.name) }
     var ageVal by remember { mutableStateOf(user.age.toString()) }
@@ -372,6 +377,7 @@ fun EditProfileDialog(
     var targetWeightVal by remember { mutableStateOf(user.targetWeight.toString()) }
     var activityVal by remember { mutableStateOf(user.activityLevel) }
     var weightGoalVal by remember { mutableStateOf(user.weightGoal) }
+    var stepGoalVal by remember { mutableStateOf(user.dailyStepGoal.toString()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -408,6 +414,13 @@ fun EditProfileDialog(
                     value = targetWeightVal,
                     onValueChange = { targetWeightVal = it },
                     label = { Text("Целевой вес (кг)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = stepGoalVal,
+                    onValueChange = { stepGoalVal = it },
+                    label = { Text("Цель по шагам (шагов/день)") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -451,7 +464,8 @@ fun EditProfileDialog(
                         heightVal.toFloatOrNull() ?: user.heightCm,
                         targetWeightVal.toFloatOrNull() ?: user.targetWeight,
                         activityVal,
-                        weightGoalVal
+                        weightGoalVal,
+                        stepGoalVal.toIntOrNull() ?: user.dailyStepGoal
                     )
                 }
             ) {
@@ -465,6 +479,7 @@ fun EditProfileDialog(
         }
     )
 }
+
 
 fun getActivityName(level: String): String = when(level) {
     "sedentary" -> "Малоподвижный образ жизни"
