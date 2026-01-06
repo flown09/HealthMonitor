@@ -17,6 +17,8 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
     val currentUser by viewModel.currentUser.collectAsState()
     val healthDataList by viewModel.healthDataList.collectAsState()
 
+    var showEditDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -24,29 +26,49 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Заголовок
-        Text(
-            text = "Профиль",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Профиль",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
 
-        // Информация пользователя
+            Button(
+                onClick = { showEditDialog = true },
+                modifier = Modifier.height(40.dp)
+            ) {
+                Text("Редактировать")
+            }
+        }
+
         currentUser?.let { user ->
             UserInfoCard(user)
 
-            // BMI
             BMICard(viewModel, user)
 
-            // Калории
-            CaloriesCard(viewModel)
+            CaloriesCard(viewModel, user)
 
-            // Вода
             WaterCard(user)
 
-            // Последние данные здоровья
             LastHealthDataCard(healthDataList)
+        }
+    }
+
+    if (showEditDialog) {
+        currentUser?.let { user ->
+            EditProfileDialog(
+                user = user,
+                onDismiss = { showEditDialog = false },
+                onSave = { name, age, heightCm, targetWeight, activityLevel, weightGoal ->
+                    viewModel.updateUser(name, age, heightCm, targetWeight, activityLevel, weightGoal)
+                    showEditDialog = false
+                }
+            )
         }
     }
 }
@@ -73,7 +95,8 @@ fun UserInfoCard(user: User) {
             InfoRow("Возраст", "${user.age} лет")
             InfoRow("Рост", "${user.heightCm} см")
             InfoRow("Целевой вес", "${user.targetWeight} кг")
-            InfoRow("Активность", user.activityLevel)
+            InfoRow("Активность", getActivityName(user.activityLevel))
+            InfoRow("Цель по весу", getWeightGoalName(user.weightGoal))
         }
     }
 }
@@ -141,10 +164,17 @@ fun BMICard(viewModel: HealthViewModel, user: User) {
 }
 
 @Composable
-fun CaloriesCard(viewModel: HealthViewModel) {
+fun CaloriesCard(viewModel: HealthViewModel, user: User) {
     val dailyCalories = viewModel.calculateDailyCalories()
     val todayCalories by viewModel.todayCalories.collectAsState()
     val remaining = dailyCalories - todayCalories
+
+    val goalText = when(user.weightGoal) {
+        "lose" -> "📉 Снижение веса (-15%)"
+        "maintain" -> "➡️ Удержание веса"
+        "gain" -> "📈 Набор веса (+15%)"
+        else -> "Нормальный режим"
+    }
 
     Card(
         modifier = Modifier
@@ -156,11 +186,18 @@ fun CaloriesCard(viewModel: HealthViewModel) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Калории сегодня",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+                Text(
+                    text = "Калории сегодня",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = goalText,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Row(
                 modifier = Modifier
@@ -252,11 +289,11 @@ fun LastHealthDataCard(healthDataList: List<com.example.healthmonitor.models.Hea
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(weight = 1f)) {
                         MetricBox("Вес", "${lastData.weight}", "кг")
                         MetricBox("Шаги", "${lastData.steps}", "")
                     }
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(weight = 1f)) {
                         MetricBox("Пульс", "${lastData.heartRate}", "уд/мин")
                         MetricBox("Сон", "${lastData.sleepHours}", "ч")
                     }
@@ -321,4 +358,126 @@ fun MetricBox(label: String, value: String, unit: String) {
             }
         }
     }
+}
+
+@Composable
+fun EditProfileDialog(
+    user: User,
+    onDismiss: () -> Unit,
+    onSave: (String, Int, Float, Float, String, String) -> Unit
+) {
+    var nameVal by remember { mutableStateOf(user.name) }
+    var ageVal by remember { mutableStateOf(user.age.toString()) }
+    var heightVal by remember { mutableStateOf(user.heightCm.toString()) }
+    var targetWeightVal by remember { mutableStateOf(user.targetWeight.toString()) }
+    var activityVal by remember { mutableStateOf(user.activityLevel) }
+    var weightGoalVal by remember { mutableStateOf(user.weightGoal) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Редактировать профиль") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TextField(
+                    value = nameVal,
+                    onValueChange = { nameVal = it },
+                    label = { Text("Имя") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = ageVal,
+                    onValueChange = { ageVal = it },
+                    label = { Text("Возраст") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = heightVal,
+                    onValueChange = { heightVal = it },
+                    label = { Text("Рост (см)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = targetWeightVal,
+                    onValueChange = { targetWeightVal = it },
+                    label = { Text("Целевой вес (кг)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Уровень активности:", fontWeight = FontWeight.Bold)
+                val activities = listOf("sedentary", "light", "moderate", "active", "very_active")
+                activities.forEach { activity ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                        RadioButton(
+                            selected = activityVal == activity,
+                            onClick = { activityVal = activity }
+                        )
+                        Text(
+                            text = getActivityName(activity),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
+                Text("Цель по весу:", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                val goals = listOf("lose", "maintain", "gain")
+                goals.forEach { goal ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                        RadioButton(
+                            selected = weightGoalVal == goal,
+                            onClick = { weightGoalVal = goal }
+                        )
+                        Text(
+                            text = getWeightGoalName(goal),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(
+                        nameVal,
+                        ageVal.toIntOrNull() ?: user.age,
+                        heightVal.toFloatOrNull() ?: user.heightCm,
+                        targetWeightVal.toFloatOrNull() ?: user.targetWeight,
+                        activityVal,
+                        weightGoalVal
+                    )
+                }
+            ) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    )
+}
+
+fun getActivityName(level: String): String = when(level) {
+    "sedentary" -> "Малоподвижный образ жизни"
+    "light" -> "Легкая активность (1-3 дня в неделю)"
+    "moderate" -> "Умеренная активность (3-5 дней)"
+    "active" -> "Высокая активность (6-7 дней)"
+    "very_active" -> "Очень высокая (ежедневные интенсивные тренировки)"
+    else -> "Неизвестно"
+}
+
+fun getWeightGoalName(goal: String): String = when(goal) {
+    "lose" -> "📉 Сбросить вес"
+    "maintain" -> "➡️ Удерживать вес"
+    "gain" -> "📈 Набрать вес"
+    else -> "Неизвестно"
 }

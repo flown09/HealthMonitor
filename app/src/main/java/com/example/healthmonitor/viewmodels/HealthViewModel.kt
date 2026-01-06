@@ -42,25 +42,36 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     }
 
     private fun loadInitialData() {
-        // Создаем тестового пользователя если его нет
         viewModelScope.launch {
-            val testUser = User(
-                id = "user_1",
-                name = "Иван",
-                age = 30,
-                gender = "male",
-                heightCm = 180f,
-                targetWeight = 75f,
-                activityLevel = "moderate"
-            )
-            repository.insertUser(testUser)
-            _currentUser.value = testUser
+            // Сначала загружаем существующего пользователя
+            repository.getAllUsers().collect { users ->
+                if (users.isNotEmpty()) {
+                    _currentUser.value = users.first()
+                    loadHealthData(users.first().id)
+                    loadNutritionData(users.first().id)
+                } else {
+                    // Если нет пользователя - создаем нового
+                    val testUser = User(
+                        id = "user_1",
+                        name = "Иван",
+                        age = 30,
+                        gender = "male",
+                        heightCm = 180f,
+                        targetWeight = 75f,
+                        activityLevel = "moderate",
+                        weightGoal = "maintain"
+                    )
+                    repository.insertUser(testUser)
+                    _currentUser.value = testUser
+                    loadHealthData("user_1")
+                    loadNutritionData("user_1")
+                }
+            }
 
             loadFoods()
-            loadHealthData("user_1")
-            loadNutritionData("user_1")
         }
     }
+
 
     private fun loadFoods() {
         viewModelScope.launch {
@@ -215,6 +226,32 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             else -> 1.5f
         }
 
-        return (bmr * multiplier).toInt()
+        val dailyCalories = bmr * multiplier
+
+        // Применяем коэффициент в зависимости от цели
+        return when(user.weightGoal) {
+            "lose" -> (dailyCalories * 0.85f).toInt()     // Дефицит 15%
+            "maintain" -> dailyCalories.toInt()             // Без изменений
+            "gain" -> (dailyCalories * 1.15f).toInt()      // Профицит 15%
+            else -> dailyCalories.toInt()
+        }
     }
+
+    fun updateUser(name: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String) {
+        viewModelScope.launch {
+            val updatedUser = _currentUser.value?.copy(
+                name = name,
+                age = age,
+                heightCm = heightCm,
+                targetWeight = targetWeight,
+                activityLevel = activityLevel,
+                weightGoal = weightGoal
+            )
+            updatedUser?.let {
+                repository.updateUser(it)
+                _currentUser.value = it
+            }
+        }
+    }
+
 }

@@ -52,10 +52,10 @@ fun HealthMonitorApp(viewModel: HealthViewModel) {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Профиль") },
-                    label = { Text("Профиль") },
-                    selected = selectedTab.value == 0,
-                    onClick = { selectedTab.value = 0 }
+                    icon = { Icon(Icons.Filled.Favorite, contentDescription = "Здоровье") },
+                    label = { Text("Здоровье") },
+                    selected = selectedTab.value == 2,
+                    onClick = { selectedTab.value = 2 }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Person, contentDescription = "Питание") },
@@ -64,10 +64,10 @@ fun HealthMonitorApp(viewModel: HealthViewModel) {
                     onClick = { selectedTab.value = 1 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Favorite, contentDescription = "Здоровье") },
-                    label = { Text("Здоровье") },
-                    selected = selectedTab.value == 2,
-                    onClick = { selectedTab.value = 2 }
+                    icon = { Icon(Icons.Filled.Home, contentDescription = "Профиль") },
+                    label = { Text("Профиль") },
+                    selected = selectedTab.value == 0,
+                    onClick = { selectedTab.value = 0 }
                 )
             }
         }

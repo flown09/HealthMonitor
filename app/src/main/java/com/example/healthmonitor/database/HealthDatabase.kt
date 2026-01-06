@@ -11,7 +11,7 @@ import com.example.healthmonitor.models.Food
 
 @Database(
     entities = [User::class, HealthData::class, NutritionData::class, Food::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class HealthDatabase : RoomDatabase() {
@@ -30,7 +30,9 @@ abstract class HealthDatabase : RoomDatabase() {
                     context.applicationContext,
                     HealthDatabase::class.java,
                     "health_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()  // ← Добавьте эту строку
+                    .build()
                 INSTANCE = instance
                 instance
             }
