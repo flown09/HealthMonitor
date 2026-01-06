@@ -106,10 +106,10 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 }
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error loading health data: ${e.message}")
-                _healthDataList.value = emptyList()
             }
         }
     }
+
 
     private fun loadNutritionData(userId: String) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -101,6 +101,9 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
 
 @Composable
 fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewModel, currentUser: com.example.healthmonitor.models.User?) {
+    // Используем collectAsState для реактивного обновления
+    val healthDataList by viewModel.healthDataList.collectAsState()
+
     val sortedData = healthDataList.sortedBy { it.date }
     val lastWeights = sortedData.takeLast(7)
 
