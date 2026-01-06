@@ -262,6 +262,17 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
+    fun updateHealthData(healthData: HealthData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.updateHealthData(healthData)
+                val userId = _currentUser.value?.id ?: "user_1"
+                loadHealthData(userId)
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error updating health data: ${e.message}")
+            }
+        }
+    }
     fun updateUser(name: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String, dailyStepGoal: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

@@ -1,14 +1,19 @@
 package com.example.healthmonitor.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.healthmonitor.models.HealthData
@@ -97,14 +102,17 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
 @Composable
 fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewModel, currentUser: com.example.healthmonitor.models.User?) {
     val sortedData = healthDataList.sortedBy { it.date }
-    val lastWeights = sortedData.takeLast(7) // Последние 7 записей
+    val lastWeights = sortedData.takeLast(7)
 
-    // Используем целевой вес из профиля как текущий вес
     val currentWeight = currentUser?.targetWeight ?: (sortedData.lastOrNull()?.weight ?: 0f)
     val previousWeight = sortedData.getOrNull(sortedData.size - 2)?.weight ?: currentWeight
     val weightChange = currentWeight - previousWeight
 
     var showWeightDialog by remember { mutableStateOf(false) }
+    var selectedWeightIndex by remember { mutableStateOf(-1) }
+    var showWeightDetailsDialog by remember { mutableStateOf(false) }
+    var selectedWeight by remember { mutableStateOf(0f) }
+    var selectedWeightData by remember { mutableStateOf<HealthData?>(null) }
 
     Card(
         modifier = Modifier
@@ -168,37 +176,92 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     }
                 }
 
-                // Мини-график (столбцы)
+                // Мини-график (столбцы) с интерактивностью
                 if (lastWeights.isNotEmpty()) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(100.dp)
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.Bottom
+                            .padding(8.dp)
                     ) {
-                        val minWeight = lastWeights.minOf { it.weight } - 2
-                        val maxWeight = lastWeights.maxOf { it.weight } + 2
-                        val range = maxWeight - minWeight
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.Bottom
+                        ) {
+                            val minWeight = lastWeights.minOf { it.weight } - 2
+                            val maxWeight = lastWeights.maxOf { it.weight } + 2
+                            val range = maxWeight - minWeight
 
-                        lastWeights.forEach { data ->
-                            val normalizedHeight = ((data.weight - minWeight) / range * 80).coerceIn(5f, 80f)
+                            lastWeights.forEachIndexed { index, data ->
+                                val normalizedHeight = ((data.weight - minWeight) / range * 80).coerceIn(5f, 80f)
+                                val isSelected = selectedWeightIndex == index
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(normalizedHeight.dp)
+                                        .background(
+                                            color = if (isSelected)
+                                                MaterialTheme.colorScheme.secondary
+                                            else
+                                                MaterialTheme.colorScheme.primary,
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onPress = {
+                                                    val pressStart = System.currentTimeMillis()
+                                                    tryAwaitRelease()
+                                                    val pressDuration = System.currentTimeMillis() - pressStart
+
+                                                    if (pressDuration < 500) {
+                                                        // Короткое нажатие - показываем значение
+                                                        selectedWeightIndex = index
+                                                        selectedWeight = data.weight
+                                                        selectedWeightData = data
+                                                    } else {
+                                                        // Долгое нажатие - открываем диалог редактирования
+                                                        selectedWeightIndex = index
+                                                        selectedWeight = data.weight
+                                                        selectedWeightData = data
+                                                        showWeightDetailsDialog = true
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        .animateContentSize()
+                                )
+                            }
+                        }
+
+                        // Показываем значение выбранного столбца
+                        if (selectedWeightIndex >= 0 && selectedWeightIndex < lastWeights.size) {
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .height(normalizedHeight.dp)
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
                                     .background(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = RoundedCornerShape(4.dp)
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        shape = RoundedCornerShape(8.dp)
                                     )
-                            )
+                                    .padding(8.dp),
+                                contentAlignment = androidx.compose.ui.Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${String.format("%.1f кг", selectedWeight)} • ${formatDate(lastWeights[selectedWeightIndex].date)}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
                     }
 
                     Text(
-                        text = "Последние ${lastWeights.size} записей",
-                        fontSize = 12.sp,
+                        text = "Последние ${lastWeights.size} записей • Нажмите на столбец для просмотра, долгое нажатие для редактирования",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -236,7 +299,79 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
             }
         )
     }
+
+    // Диалог редактирования веса при долгом нажатии
+    if (showWeightDetailsDialog && selectedWeightData != null) {
+        var newWeight by remember { mutableStateOf(selectedWeight.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showWeightDetailsDialog = false },
+            title = {
+                Text("Редактировать вес")
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Дата: ${formatDate(selectedWeightData!!.date)}",
+                        fontSize = 14.sp
+                    )
+                    TextField(
+                        value = newWeight,
+                        onValueChange = { newWeight = it },
+                        label = { Text("Вес (кг)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val weight = newWeight.toFloatOrNull() ?: selectedWeight
+                        selectedWeightData?.let { data ->
+                            viewModel.updateHealthData(data.copy(weight = weight))
+
+                            // Обновляем профиль используя существующую функцию
+                            val currentUser = viewModel.currentUser.value
+                            if (currentUser != null) {
+                                viewModel.updateUser(
+                                    name = currentUser.name,
+                                    age = currentUser.age,
+                                    heightCm = currentUser.heightCm,
+                                    targetWeight = weight,
+                                    activityLevel = currentUser.activityLevel,
+                                    weightGoal = currentUser.weightGoal,
+                                    dailyStepGoal = currentUser.dailyStepGoal
+                                )
+                            }
+                        }
+                        showWeightDetailsDialog = false
+                        selectedWeightIndex = -1
+                    }
+                ) {
+                    Text("Сохранить")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showWeightDetailsDialog = false }
+                ) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
 }
+
+// Функция для форматирования даты
+fun formatDate(timestamp: Long): String {
+    val sdf = java.text.SimpleDateFormat("dd.MM.yy", java.util.Locale.getDefault())
+    return sdf.format(java.util.Date(timestamp))
+}
+
 
 
 @Composable
