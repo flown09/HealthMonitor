@@ -48,13 +48,7 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
 
         currentUser?.let { user ->
             UserInfoCard(user)
-
-            BMICard(viewModel, user)
-
             CaloriesCard(viewModel, user)
-
-            WaterCard(user)
-
             LastHealthDataCard(healthDataList)
         }
     }
@@ -71,8 +65,6 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             )
         }
     }
-
-
 }
 
 @Composable
@@ -99,68 +91,6 @@ fun UserInfoCard(user: User) {
             InfoRow("Целевой вес", "${user.targetWeight} кг")
             InfoRow("Активность", getActivityName(user.activityLevel))
             InfoRow("Цель по весу", getWeightGoalName(user.weightGoal))
-        }
-    }
-}
-
-@Composable
-fun BMICard(viewModel: HealthViewModel, user: User) {
-    val bmi = viewModel.calculateBMI()
-    val bmiCategory = when {
-        bmi < 18.5 -> "Недостаток веса"
-        bmi < 25 -> "Нормальный вес"
-        bmi < 30 -> "Избыточный вес"
-        else -> "Ожирение"
-    }
-
-    val bmiColor = when {
-        bmi < 18.5 -> MaterialTheme.colorScheme.secondary
-        bmi < 25 -> MaterialTheme.colorScheme.primary
-        bmi < 30 -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.error
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Индекс массы тела (BMI)",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("ИМТ", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = String.format("%.1f", bmi),
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = bmiColor
-                    )
-                }
-
-                Column {
-                    Text("Категория", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = bmiCategory,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
         }
     }
 }
@@ -227,45 +157,6 @@ fun CaloriesCard(viewModel: HealthViewModel, user: User) {
         }
     }
 }
-
-@Composable
-fun WaterCard(user: User) {
-    // Используем точку как разделитель, независимо от локали
-    val waterNormFloat = (user.targetWeight * 35) / 1000
-    val waterNorm = String.format(java.util.Locale.US, "%.1f", waterNormFloat)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Рекомендуемое потребление воды",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "$waterNorm литров в день",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Text(
-                text = "Это примерно ${(waterNormFloat * 1000).toInt() / 250} стаканов по 250мл",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
 
 @Composable
 fun LastHealthDataCard(healthDataList: List<com.example.healthmonitor.models.HealthData>) {
@@ -479,7 +370,6 @@ fun EditProfileDialog(
         }
     )
 }
-
 
 fun getActivityName(level: String): String = when(level) {
     "sedentary" -> "Малоподвижный образ жизни"

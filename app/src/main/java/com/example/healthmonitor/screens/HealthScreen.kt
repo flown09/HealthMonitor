@@ -1,8 +1,6 @@
 package com.example.healthmonitor.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -82,6 +80,12 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             }
         }
 
+        // BMI Карточка
+        currentUser?.let { user ->
+            BMICard(viewModel, user)
+            WaterCard(user)
+        }
+
         // Последние показатели здоровья
         if (healthDataList.isNotEmpty()) {
             Text(
@@ -114,9 +118,6 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
         }
     }
 }
-
-
-
 
 @Composable
 fun HealthDataItemCard(health: HealthData) {
@@ -160,93 +161,101 @@ fun HealthDataItemCard(health: HealthData) {
 }
 
 @Composable
-fun AddHealthDataDialog(
-    onDismiss: () -> Unit,
-    onAdd: (Float, Int, Int, Int, Int, Float, Float) -> Unit
-) {
-    var weightVal by remember { mutableStateOf("") }
-    var heartRateVal by remember { mutableStateOf("") }
-    var sysBPVal by remember { mutableStateOf("") }
-    var diaBPVal by remember { mutableStateOf("") }
-    var stepsVal by remember { mutableStateOf("") }
-    var sleepVal by remember { mutableStateOf("") }
-    var waterVal by remember { mutableStateOf("") }
+fun BMICard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.User) {
+    val bmi = viewModel.calculateBMI()
+    val bmiCategory = when {
+        bmi < 18.5 -> "Недостаток веса"
+        bmi < 25 -> "Нормальный вес"
+        bmi < 30 -> "Избыточный вес"
+        else -> "Ожирение"
+    }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Добавить показатели здоровья") },
-        text = {
-            Column(
+    val bmiColor = when {
+        bmi < 18.5 -> MaterialTheme.colorScheme.secondary
+        bmi < 25 -> MaterialTheme.colorScheme.primary
+        bmi < 30 -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.error
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Индекс массы тела (BMI)",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                TextField(
-                    value = weightVal,
-                    onValueChange = { weightVal = it },
-                    label = { Text("Вес (кг)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = heartRateVal,
-                    onValueChange = { heartRateVal = it },
-                    label = { Text("Пульс (уд/мин)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = sysBPVal,
-                    onValueChange = { sysBPVal = it },
-                    label = { Text("Систолическое АД") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = diaBPVal,
-                    onValueChange = { diaBPVal = it },
-                    label = { Text("Диастолическое АД") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = stepsVal,
-                    onValueChange = { stepsVal = it },
-                    label = { Text("Шаги") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = sleepVal,
-                    onValueChange = { sleepVal = it },
-                    label = { Text("Сон (часов)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = waterVal,
-                    onValueChange = { waterVal = it },
-                    label = { Text("Вода (литров)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onAdd(
-                        weightVal.toFloatOrNull() ?: 70f,
-                        heartRateVal.toIntOrNull() ?: 70,
-                        sysBPVal.toIntOrNull() ?: 120,
-                        diaBPVal.toIntOrNull() ?: 80,
-                        stepsVal.toIntOrNull() ?: 0,
-                        sleepVal.toFloatOrNull() ?: 8f,
-                        waterVal.toFloatOrNull() ?: 2f
+                Column {
+                    Text("ИМТ", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format("%.1f", bmi),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = bmiColor
                     )
                 }
-            ) {
-                Text("Добавить")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Отмена")
+
+                Column {
+                    Text("Категория", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = bmiCategory,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
-    )
+    }
+}
+
+@Composable
+fun WaterCard(user: com.example.healthmonitor.models.User) {
+    // Используем точку как разделитель, независимо от локали
+    val waterNormFloat = (user.targetWeight * 35) / 1000
+    val waterNorm = String.format(java.util.Locale.US, "%.1f", waterNormFloat)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Рекомендуемое потребление воды",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "$waterNorm литров в день",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Text(
+                text = "Это примерно ${(waterNormFloat * 1000).toInt() / 250} стаканов по 250мл",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
