@@ -22,6 +22,13 @@ import androidx.compose.ui.unit.sp
 import com.example.healthmonitor.models.Food
 import com.example.healthmonitor.models.NutritionData
 import com.example.healthmonitor.viewmodels.HealthViewModel
+import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.style.TextAlign
+
 
 @Composable
 fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
@@ -31,23 +38,47 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddFoodDialog by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf(getTodayTimestamp()) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Заголовок и кнопки
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+    val nutritionForSelectedDate = remember(nutritionData, selectedDate) {
+        nutritionData.filter { it.date == selectedDate }
+    }
+
+    val selectedDateCalories = remember(nutritionForSelectedDate) {
+        nutritionForSelectedDate.sumOf { it.calories }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp)
+    ) {
+        // Заголовок
+        item {
             Text(
                 text = "Дневник питания",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
 
-            CalorieSummaryCard(todayCalories, viewModel.calculateDailyCalories())
+        // Дата
+        item {
+            DatePickerRow(
+                selectedDate = selectedDate,
+                onDateSelected = { selectedDate = it }
+            )
+        }
 
+        // Карточка калорий
+        item {
+            CalorieSummaryCard(selectedDateCalories, viewModel.calculateDailyCalories())
+        }
+
+        // Кнопки
+        item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { showAddDialog = true },
@@ -65,34 +96,29 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Список продуктов БЕЗ пустого пространства
-        if (nutritionData.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "Нет записей о еде",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(nutritionData) { nutrition ->
-                    NutritionCard(
-                        nutrition = nutrition,
-                        onDelete = { viewModel.deleteNutritionData(it) }  // ← ДОБАВЬ ЭТО
+        // Записи о еде
+        if (nutritionForSelectedDate.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    Text(
+                        text = "Нет записей о еде",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-
+        } else {
+            items(nutritionForSelectedDate) { nutrition ->
+                NutritionCard(
+                    nutrition = nutrition,
+                    onDelete = { viewModel.deleteNutritionData(it) }
+                )
+            }
         }
     }
 
@@ -117,6 +143,82 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         )
     }
 }
+
+
+// Компонент выбора даты - БЕЗ своего Arrangement.spacedBy
+@Composable
+fun DatePickerRow(
+    selectedDate: Long,
+    onDateSelected: (Long) -> Unit
+) {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = selectedDate
+
+    val dateFormatter = remember { SimpleDateFormat("dd MMM", Locale("ru")) }
+    val dateString = remember(selectedDate) { dateFormatter.format(Date(selectedDate)) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),  // ← Было 8.dp, теперь 4.dp
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = {
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                onDateSelected(calendar.timeInMillis)
+            },
+            modifier = Modifier.height(36.dp).width(50.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("◀", fontSize = 16.sp)
+        }
+
+        Text(
+            text = dateString,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .weight(1f)
+                .clickable {
+                    // Можно добавить DatePicker позже
+                },
+            textAlign = TextAlign.Center
+        )
+
+        Button(
+            onClick = {
+                calendar.add(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                onDateSelected(calendar.timeInMillis)
+            },
+            modifier = Modifier.height(36.dp).width(50.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("▶", fontSize = 16.sp)
+        }
+    }
+}
+
+
+// Helper функция для получения today timestamp
+fun getTodayTimestamp(): Long {
+    val calendar = Calendar.getInstance()
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    return calendar.timeInMillis
+}
+
 
 
 @Composable
