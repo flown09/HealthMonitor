@@ -494,17 +494,6 @@ fun AddFoodDialog(
 }
 
 
-
-fun getCategoryName(category: String): String = when(category) {
-    "meat" -> "🥩 Мясо и рыба"
-    "dairy" -> "🥛 Молочные продукты"
-    "vegetables" -> "🥬 Овощи"
-    "fruits" -> "🍎 Фрукты"
-    "grains" -> "🌾 Крупы и хлеб"
-    else -> "Другое"
-}
-
-
 @Composable
 fun AddNewFoodDialog(
     onDismiss: () -> Unit,
@@ -515,7 +504,6 @@ fun AddNewFoodDialog(
     var proteinStr by remember { mutableStateOf("") }
     var carbsStr by remember { mutableStateOf("") }
     var fatStr by remember { mutableStateOf("") }
-    var categoryStr by remember { mutableStateOf("vegetables") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -562,26 +550,7 @@ fun AddNewFoodDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("Категория:", fontWeight = FontWeight.Bold)
-                val categories = listOf("meat", "dairy", "vegetables", "fruits", "grains")
-                categories.forEach { cat ->
-                    Row {
-                        RadioButton(
-                            selected = categoryStr == cat,
-                            onClick = { categoryStr = cat }
-                        )
-                        Text(
-                            text = when (cat) {
-                                "meat" -> "Мясо"
-                                "dairy" -> "Молочное"
-                                "vegetables" -> "Овощи"
-                                "fruits" -> "Фрукты"
-                                else -> "Зерна"
-                            },
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                }
+                // ← ВСЕ RadioButton удали отсюда!
             }
         },
         confirmButton = {
@@ -592,7 +561,7 @@ fun AddNewFoodDialog(
                     proteinStr.toFloatOrNull() ?: 0f,
                     carbsStr.toFloatOrNull() ?: 0f,
                     fatStr.toFloatOrNull() ?: 0f,
-                    categoryStr
+                    "vegetables"  // ← Используем категорию по умолчанию (овощи)
                 )
             }) {
                 Text("Добавить")
