@@ -22,5 +22,5 @@ interface NutritionDataDao {
     fun updateNutritionData(data: NutritionData)
 
     @Delete
-    fun deleteNutritionData(data: NutritionData)
+    fun deleteNutritionData(nutrition: NutritionData)
 }

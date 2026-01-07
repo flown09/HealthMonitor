@@ -419,4 +419,28 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
+    fun deleteNutritionData(nutrition: NutritionData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Сразу удаляем из текущего списка в памяти
+                val updatedList = _nutritionDataList.value.filter { it.id != nutrition.id }
+                _nutritionDataList.value = updatedList
+
+                // Обновляем калории
+                updateTodayCalories()
+
+                // Затем удаляем из БД
+                repository.deleteNutritionData(nutrition)
+
+                // И перезагружаем с БД для синхронизации
+                delay(300)
+                val userId = _currentUser.value?.id ?: "user_1"
+                loadNutritionData(userId)
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error deleting nutrition data: ${e.message}")
+            }
+        }
+    }
+
+
 }

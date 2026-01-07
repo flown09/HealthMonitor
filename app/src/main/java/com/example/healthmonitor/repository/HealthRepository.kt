@@ -68,4 +68,7 @@ class HealthRepository(private val database: HealthDatabase) {
         Log.d("HealthRepository", "All foods inserted")
     }
 
+    suspend fun deleteNutritionData(nutrition: NutritionData) = withContext(Dispatchers.IO) {
+        database.nutritionDataDao().deleteNutritionData(nutrition)
+    }
 }

@@ -2,6 +2,7 @@ package com.example.healthmonitor.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -84,9 +86,13 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(nutritionData) { nutrition ->
-                    NutritionCard(nutrition)
+                    NutritionCard(
+                        nutrition = nutrition,
+                        onDelete = { viewModel.deleteNutritionData(it) }  // ← ДОБАВЬ ЭТО
+                    )
                 }
             }
+
         }
     }
 
@@ -149,9 +155,17 @@ fun CalorieSummaryCard(todayCalories: Int, dailyGoal: Int) {
 }
 
 @Composable
-fun NutritionCard(nutrition: NutritionData) {
+fun NutritionCard(nutrition: NutritionData, onDelete: (NutritionData) -> Unit) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = { showDeleteDialog = true }
+                )
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -183,7 +197,32 @@ fun NutritionCard(nutrition: NutritionData) {
             }
         }
     }
+
+    // Диалог удаления
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Удалить запись?") },
+            text = { Text("Вы уверены, что хотите удалить \"${nutrition.foodName}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete(nutrition)
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Удалить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 fun MacroIndicator(label: String, val1: Int) {
