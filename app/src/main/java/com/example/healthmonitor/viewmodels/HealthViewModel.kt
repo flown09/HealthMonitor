@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.first
 
 class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
+    private val _todayMacros = MutableStateFlow(Triple(0, 0, 0))
+    val todayMacros: StateFlow<Triple<Int, Int, Int>> = _todayMacros.asStateFlow()
+
     val _refreshTrigger = MutableStateFlow(0)
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
@@ -44,13 +47,20 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 val today = getTodayTimestamp()
                 val todayNutrition = _nutritionDataList.value.filter { it.date == today }
                 val totalCalories = todayNutrition.sumOf { it.calories }
+                val totalProtein = todayNutrition.sumOf { it.protein.toInt() }
+                val totalFat = todayNutrition.sumOf { it.fat.toInt() }
+                val totalCarbs = todayNutrition.sumOf { it.carbs.toInt() }
+
                 _todayCalories.value = totalCalories
-                Log.d("HealthViewModel", "Today calories updated: $totalCalories")
+                _todayMacros.value = Triple(totalProtein, totalFat, totalCarbs)
+
+                Log.d("HealthViewModel", "Today macros: P:$totalProtein F:$totalFat C:$totalCarbs")
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error updating today calories: ${e.message}")
             }
         }
     }
+
     init {
         loadInitialData()
     }
@@ -371,6 +381,22 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             "gain" -> (dailyCalories * 1.15f).toInt()
             else -> dailyCalories.toInt()
         }
+    }
+
+    fun calculateDailyMacros(): Triple<Int, Int, Int> {
+        val dailyCalories = calculateDailyCalories()
+
+        // Стандартное распределение: 30% белки, 20% жиры, 50% углеводы
+        val proteinCalories = dailyCalories * 0.30f
+        val fatCalories = dailyCalories * 0.20f
+        val carbsCalories = dailyCalories * 0.50f
+
+        // Конвертируем в граммы (1г = 4 ккал для белков и углеводов, 1г = 9 ккал для жиров)
+        val protein = (proteinCalories / 4).toInt()
+        val fat = (fatCalories / 9).toInt()
+        val carbs = (carbsCalories / 4).toInt()
+
+        return Triple(protein, fat, carbs)
     }
 
 

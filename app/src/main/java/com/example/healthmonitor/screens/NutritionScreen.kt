@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 
 
@@ -35,6 +36,7 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
     val foods by viewModel.foods.collectAsState()
     val nutritionData by viewModel.nutritionDataList.collectAsState()
     val todayCalories by viewModel.todayCalories.collectAsState()
+    val todayMacros by viewModel.todayMacros.collectAsState()  // ← ДОБАВЬ ЭТО
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddFoodDialog by remember { mutableStateOf(false) }
@@ -48,14 +50,22 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         nutritionForSelectedDate.sumOf { it.calories }
     }
 
+    // ← ДОБАВЬ РАСЧЕТ БЖУ ДЛЯ ВЫБРАННОЙ ДАТЫ
+    val selectedDateMacros = remember(nutritionForSelectedDate) {
+        Triple(
+            nutritionForSelectedDate.sumOf { it.protein.toInt() },
+            nutritionForSelectedDate.sumOf { it.fat.toInt() },
+            nutritionForSelectedDate.sumOf { it.carbs.toInt() }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp)
+        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
     ) {
-        // Заголовок
         item {
             Text(
                 text = "Дневник питания",
@@ -64,7 +74,6 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             )
         }
 
-        // Дата
         item {
             DatePickerRow(
                 selectedDate = selectedDate,
@@ -72,12 +81,18 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             )
         }
 
-        // Карточка калорий
         item {
             CalorieSummaryCard(selectedDateCalories, viewModel.calculateDailyCalories())
         }
 
-        // Кнопки
+        // ← ДОБАВЬ НОВУЮ КАРТОЧКУ С БЖУ
+        item {
+            MacroSummaryCard(
+                selectedDateMacros,
+                viewModel.calculateDailyMacros()
+            )
+        }
+
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -96,7 +111,6 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Записи о еде
         if (nutritionForSelectedDate.isEmpty()) {
             item {
                 Box(
@@ -128,11 +142,10 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             onDismiss = { showAddDialog = false },
             onAdd = { food, portion, mealType ->
                 viewModel.addNutritionData(food, portion, mealType, selectedDate)
-                showAddDialog = false  // ← ВАЖНО: закрой диалог ПОСЛЕ добавления
+                showAddDialog = false
             }
         )
     }
-
 
     if (showAddFoodDialog) {
         AddNewFoodDialog(
@@ -141,6 +154,131 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
                 viewModel.addFood(name, calories, protein, carbs, fat, category)
                 showAddFoodDialog = false
             }
+        )
+    }
+}
+
+@Composable
+fun MacroSummaryCard(
+    todayMacros: Triple<Int, Int, Int>,
+    dailyGoalMacros: Triple<Int, Int, Int>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = "БЖУ за день",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Один Row с 3 макросами
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SimpleMacroBar(
+                    label = "Б",
+                    current = todayMacros.first,
+                    goal = dailyGoalMacros.first,
+                    color = Color(0xFF2180A8),
+                    modifier = Modifier.weight(1f)  // ← ДОБАВЬ ЭТО
+                )
+                SimpleMacroBar(
+                    label = "Ж",
+                    current = todayMacros.second,
+                    goal = dailyGoalMacros.second,
+                    color = Color(0xFF20B89A),
+                    modifier = Modifier.weight(1f)  // ← ДОБАВЬ ЭТО
+                )
+                SimpleMacroBar(
+                    label = "У",
+                    current = todayMacros.third,
+                    goal = dailyGoalMacros.third,
+                    color = Color(0xFF0066CC),
+                    modifier = Modifier.weight(1f)  // ← ДОБАВЬ ЭТО
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SimpleMacroBar(
+    label: String,
+    current: Int,
+    goal: Int,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+
+        LinearProgressIndicator(
+            progress = { (current.toFloat() / goal).coerceAtMost(1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = color
+        )
+
+        Text(
+            text = "$current/$goal г",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+
+
+
+
+@Composable
+fun MacroBar(
+    label: String,
+    current: Int,
+    goal: Int,
+    color: androidx.compose.ui.graphics.Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(0.33f)
+            .padding(2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = "$current/$goal г",  // ← Убрал пробел: было "/ 275", теперь "/$goal"
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+        LinearProgressIndicator(
+            progress = { (current.toFloat() / goal).coerceAtMost(1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = color
         )
     }
 }
