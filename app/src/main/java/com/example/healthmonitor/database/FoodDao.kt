@@ -9,6 +9,9 @@ interface FoodDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertFood(food: Food)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertFoods(foods: List<Food>)
+
     @Query("SELECT * FROM foods ORDER BY name ASC")
     fun getAllFoods(): Flow<List<Food>>
 

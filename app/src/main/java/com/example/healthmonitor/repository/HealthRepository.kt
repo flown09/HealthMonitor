@@ -1,5 +1,6 @@
 package com.example.healthmonitor.repository
 
+import android.util.Log
 import com.example.healthmonitor.database.HealthDatabase
 import com.example.healthmonitor.models.User
 import com.example.healthmonitor.models.HealthData
@@ -62,6 +63,9 @@ class HealthRepository(private val database: HealthDatabase) {
     }
 
     suspend fun insertFoods(foods: List<Food>) = withContext(Dispatchers.IO) {
-        foods.forEach { database.foodDao().insertFood(it) }
+        Log.d("HealthRepository", "Inserting ${foods.size} foods...")
+        database.foodDao().insertFoods(foods)
+        Log.d("HealthRepository", "All foods inserted")
     }
+
 }

@@ -16,6 +16,8 @@ import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import android.util.Log
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+
 
 
 class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
@@ -43,7 +45,10 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     private fun loadInitialData() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Получаем пользователя
+                // Сначала ДОЖДЕМСЯ добавления продуктов
+                initializeFoodsSync()
+
+                // ПОТОМ получаем пользователя
                 val users = try {
                     repository.getAllUsers()
                 } catch (e: Exception) {
@@ -74,6 +79,65 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
+    private suspend fun initializeFoodsSync() {
+        try {
+            val existingFoods = repository.getAllFoods().first()
+            Log.d("HealthViewModel", "Existing foods count: ${existingFoods.size}")
+
+            if (existingFoods.size < 21) {
+                Log.d("HealthViewModel", "Adding initial foods... (current: ${existingFoods.size})")
+
+                val initialFoods = listOf(
+                    Food(name = "Курица (грудка)", calories = 165, protein = 31f, carbs = 0f, fat = 3.6f, fiber = 0f, category = "meat"),
+                    Food(name = "Говядина (постная)", calories = 250, protein = 26f, carbs = 0f, fat = 17f, fiber = 0f, category = "meat"),
+                    Food(name = "Рыба (лосось)", calories = 208, protein = 20f, carbs = 0f, fat = 13f, fiber = 0f, category = "meat"),
+                    Food(name = "Яйцо куриное", calories = 155, protein = 13f, carbs = 1.1f, fat = 11f, fiber = 0f, category = "meat"),
+                    Food(name = "Молоко (2.5%)", calories = 54, protein = 3.3f, carbs = 4.8f, fat = 2.5f, fiber = 0f, category = "dairy"),
+                    Food(name = "Йогурт (натуральный)", calories = 59, protein = 3.5f, carbs = 3.3f, fat = 0.4f, fiber = 0f, category = "dairy"),
+                    Food(name = "Сыр (твёрдый)", calories = 402, protein = 25f, carbs = 1.3f, fat = 33f, fiber = 0f, category = "dairy"),
+                    Food(name = "Творог (5%)", calories = 121, protein = 17f, carbs = 3.3f, fat = 5f, fiber = 0f, category = "dairy"),
+                    Food(name = "Брокколи", calories = 34, protein = 2.8f, carbs = 7f, fat = 0.4f, fiber = 2.4f, category = "vegetables"),
+                    Food(name = "Морковь", calories = 41, protein = 0.9f, carbs = 10f, fat = 0.2f, fiber = 2.8f, category = "vegetables"),
+                    Food(name = "Помидор", calories = 18, protein = 0.9f, carbs = 3.9f, fat = 0.2f, fiber = 1.2f, category = "vegetables"),
+                    Food(name = "Огурец", calories = 16, protein = 0.7f, carbs = 3.6f, fat = 0.1f, fiber = 0.5f, category = "vegetables"),
+                    Food(name = "Салат (зелёный)", calories = 15, protein = 1.5f, carbs = 2.9f, fat = 0.2f, fiber = 1.3f, category = "vegetables"),
+                    Food(name = "Картофель (варёный)", calories = 77, protein = 2f, carbs = 17f, fat = 0.1f, fiber = 2.1f, category = "vegetables"),
+                    Food(name = "Банан", calories = 89, protein = 1.1f, carbs = 23f, fat = 0.3f, fiber = 2.6f, category = "fruits"),
+                    Food(name = "Яблоко", calories = 52, protein = 0.3f, carbs = 14f, fat = 0.2f, fiber = 2.4f, category = "fruits"),
+                    Food(name = "Апельсин", calories = 47, protein = 0.9f, carbs = 12f, fat = 0.1f, fiber = 2.4f, category = "fruits"),
+                    Food(name = "Ягоды (смешанные)", calories = 52, protein = 1f, carbs = 12f, fat = 0.3f, fiber = 1.7f, category = "fruits"),
+                    Food(name = "Рис (варёный)", calories = 130, protein = 2.7f, carbs = 28f, fat = 0.3f, fiber = 0.4f, category = "grains"),
+                    Food(name = "Гречка (варёная)", calories = 123, protein = 4.3f, carbs = 25f, fat = 1.1f, fiber = 2.7f, category = "grains"),
+                    Food(name = "Овсяная каша", calories = 68, protein = 2.4f, carbs = 12f, fat = 1.4f, fiber = 1.6f, category = "grains"),
+                    Food(name = "Хлеб (пшеничный)", calories = 265, protein = 8.4f, carbs = 49f, fat = 3.3f, fiber = 2.7f, category = "grains"),
+                    Food(name = "Макароны (варёные)", calories = 131, protein = 4.4f, carbs = 25f, fat = 1.1f, fiber = 1.8f, category = "grains")
+                )
+
+                Log.d("HealthViewModel", "Total foods to insert: ${initialFoods.size}")
+
+                try {
+                    repository.insertFoods(initialFoods)
+                    Log.d("HealthViewModel", "All foods inserted successfully!")
+                } catch (e: Exception) {
+                    Log.e("HealthViewModel", "Error inserting foods batch: ${e.message}")
+                }
+
+                delay(500)
+
+                val afterInsert = repository.getAllFoods().first()
+                Log.d("HealthViewModel", "Foods in DB after insert: ${afterInsert.size}")
+                afterInsert.forEach { Log.d("HealthViewModel", "  - ${it.name}") }
+            } else {
+                Log.d("HealthViewModel", "Foods already exist in DB: ${existingFoods.size}")
+                existingFoods.forEach { Log.d("HealthViewModel", "  - ${it.name}") }
+            }
+        } catch (e: Exception) {
+            Log.e("HealthViewModel", "Error initializing foods: ${e.message}", e)
+        }
+    }
+
+
 
     private fun createDefaultUser() {
         viewModelScope.launch(Dispatchers.IO) {

@@ -2,17 +2,16 @@ package com.example.healthmonitor.models
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.util.UUID
 
 @Entity(tableName = "foods")
 data class Food(
-    @PrimaryKey
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
     val name: String,
-    val calories: Int,      // на 100г
-    val protein: Float,     // на 100г
-    val carbs: Float,       // на 100г
-    val fat: Float,         // на 100г
-    val fiber: Float = 0f,  // на 100г
-    val category: String    // "meat", "dairy", "vegetables", "fruits", "grains"
+    val calories: Int,
+    val protein: Float,
+    val carbs: Float,
+    val fat: Float,
+    val fiber: Float = 0f,
+    val category: String
 )
