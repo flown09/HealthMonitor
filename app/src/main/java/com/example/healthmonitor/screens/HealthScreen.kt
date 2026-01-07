@@ -19,12 +19,15 @@ import androidx.compose.ui.unit.sp
 import com.example.healthmonitor.models.HealthData
 import com.example.healthmonitor.utils.StepCounter
 import com.example.healthmonitor.viewmodels.HealthViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier: Modifier = Modifier) {
     val healthDataList by viewModel.healthDataList.collectAsState()
     val currentSteps by stepCounter.stepCount.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
+
+    val refreshTrigger by viewModel._refreshTrigger.collectAsState()
 
     val stepGoal = currentUser?.dailyStepGoal ?: 10000
 
@@ -116,6 +119,12 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     var showWeightDetailsDialog by remember { mutableStateOf(false) }
     var selectedWeight by remember { mutableStateOf(0f) }
     var selectedWeightData by remember { mutableStateOf<HealthData?>(null) }
+
+    // Очищаем выделение когда изменился список
+    LaunchedEffect(lastWeights.size) {
+        selectedWeightIndex = -1
+        selectedWeightData = null
+    }
 
     Card(
         modifier = Modifier
@@ -252,8 +261,10 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                                     .padding(8.dp),
                                 contentAlignment = androidx.compose.ui.Alignment.Center
                             ) {
+                                // Используем data из lastWeights напрямую, а не selectedWeight
+                                val displayWeight = lastWeights.getOrNull(selectedWeightIndex)
                                 Text(
-                                    text = "${String.format("%.1f кг", selectedWeight)} • ${formatDate(lastWeights[selectedWeightIndex].date)}",
+                                    text = "${String.format("%.1f кг", displayWeight?.weight ?: selectedWeight)} • ${formatDate(displayWeight?.date ?: 0)}",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -268,6 +279,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
             } else {
                 Box(
                     modifier = Modifier
@@ -377,11 +389,10 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                         onClick = {
                             selectedWeightData?.let { data ->
                                 viewModel.deleteHealthData(data)
-                                // Сразу закрываем диалог и очищаем выделение
-                                showWeightDetailsDialog = false
-                                selectedWeightIndex = -1
-                                selectedWeightData = null
                             }
+                            showWeightDetailsDialog = false
+                            selectedWeightIndex = -1
+                            selectedWeightData = null
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
@@ -390,6 +401,8 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     ) {
                         Text("Удалить")
                     }
+
+
                 }
             }
         )

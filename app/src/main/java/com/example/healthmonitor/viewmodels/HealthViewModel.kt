@@ -20,6 +20,7 @@ import kotlinx.coroutines.delay
 
 class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
+    val _refreshTrigger = MutableStateFlow(0)
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
@@ -102,13 +103,15 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.getHealthDataByUser(userId).collect { data ->
-                    _healthDataList.value = data
+                    _healthDataList.value = data.sortedBy { it.date }
+                    _refreshTrigger.value += 1  // Триггер обновления
                 }
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error loading health data: ${e.message}")
             }
         }
     }
+
 
 
     private fun loadNutritionData(userId: String) {
@@ -299,16 +302,21 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     fun deleteHealthData(healthData: HealthData) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Сразу удаляем из текущего списка в памяти
+                val updatedList = _healthDataList.value.filter { it.id != healthData.id }
+                _healthDataList.value = updatedList
+
+                // Затем удаляем из БД
                 repository.deleteHealthData(healthData)
+
+                // И перезагружаем с БД для синхронизации
+                delay(300)
                 val userId = _currentUser.value?.id ?: "user_1"
-                // Небольшая задержка для уверенности, что данные удалены
-                delay(100)
                 loadHealthData(userId)
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error deleting health data: ${e.message}")
             }
         }
     }
-
 
 }
