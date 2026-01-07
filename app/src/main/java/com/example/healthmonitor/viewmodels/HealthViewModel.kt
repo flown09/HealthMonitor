@@ -222,6 +222,8 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     fun addHealthData(weight: Float, heartRate: Int, sys: Int, dia: Int, steps: Int, sleep: Float, water: Float) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                Log.d("HealthViewModel", "Adding health data with weight: $weight")
+
                 val healthData = HealthData(
                     userId = _currentUser.value?.id ?: "user_1",
                     date = getTodayTimestamp(),
@@ -235,23 +237,22 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 )
                 repository.insertHealthData(healthData)
 
-                // Обновляем targetWeight в профиле на новый вес
                 val userId = _currentUser.value?.id ?: "user_1"
                 val currentUser = _currentUser.value
                 if (currentUser != null) {
                     val updatedUser = currentUser.copy(targetWeight = weight)
                     repository.updateUser(updatedUser)
-                    // ВАЖНО: обновляем _currentUser в памяти
                     _currentUser.value = updatedUser
+                    Log.d("HealthViewModel", "User weight updated to: $weight")
                 }
 
-                // Перезагружаем данные
                 loadHealthData(userId)
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error adding health data: ${e.message}")
             }
         }
     }
+
 
     fun calculateWaterIntake(): Float {
         val user = _currentUser.value ?: return 0f
@@ -337,15 +338,19 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
     fun calculateDailyCalories(): Int {
         val user = _currentUser.value ?: return 0
-        val lastHealth = _healthDataList.value.firstOrNull()
+        val lastHealth = _healthDataList.value.lastOrNull()  // ← Было firstOrNull(), теперь lastOrNull()
         val weight = lastHealth?.weight ?: user.targetWeight
 
+        Log.d("HealthViewModel", "BMR calculation - weight: $weight, age: ${user.age}, height: ${user.heightCm}")
+
         val bmr = HealthCalculations.calculateBMR(
-            user.age * 365,
+            user.age,  // ← Передай просто age, не age * 365
             weight,
             user.heightCm,
             user.gender == "male"
         )
+
+        Log.d("HealthViewModel", "BMR: $bmr")
 
         val multiplier = when(user.activityLevel) {
             "sedentary" -> 1.2f
@@ -358,6 +363,8 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
         val dailyCalories = bmr * multiplier
 
+        Log.d("HealthViewModel", "Daily calories: $dailyCalories (multiplier: $multiplier)")
+
         return when(user.weightGoal) {
             "lose" -> (dailyCalories * 0.85f).toInt()
             "maintain" -> dailyCalories.toInt()
@@ -365,6 +372,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             else -> dailyCalories.toInt()
         }
     }
+
 
     fun updateHealthData(healthData: HealthData) {
         viewModelScope.launch(Dispatchers.IO) {
