@@ -174,6 +174,21 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
+    fun calculateWaterIntake(): Float {
+        val user = _currentUser.value ?: return 0f
+        val baseIntake = user.targetWeight * 30 // 30 мл на кг
+
+        val activityMultiplier = when (user.activityLevel) {
+            "sedentary" -> 1.2f
+            "light" -> 1.375f
+            "moderate" -> 1.55f
+            "active" -> 1.725f
+            "very_active" -> 1.9f
+            else -> 1.2f
+        }
+
+        return baseIntake * activityMultiplier / 1000 // Конвертируем в литры
+    }
 
 
     fun addNutritionData(food: Food, portionGrams: Float, mealType: String) {

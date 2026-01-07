@@ -96,7 +96,7 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
         // BMI Карточка
         currentUser?.let { user ->
             BMICard(viewModel, user)
-            WaterCard(user)
+            WaterCard(viewModel, user)
         }
     }
 }
@@ -545,10 +545,35 @@ fun BMICard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.U
 
 
 @Composable
-fun WaterCard(user: com.example.healthmonitor.models.User) {
-    // Используем точку как разделитель, независимо от локали
-    val waterNormFloat = (user.targetWeight * 35) / 1000
-    val waterNorm = String.format(java.util.Locale.US, "%.1f", waterNormFloat)
+fun WaterCard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.User) {
+    val currentUser by viewModel.currentUser.collectAsState()
+
+    // Пересчитываем рекомендуемое потребление воды с учетом активности
+    val recommendedWater = remember(currentUser) {
+        currentUser?.let { u ->
+            val baseIntake = u.targetWeight * 30 // 30 мл на 1 кг
+            val activityMultiplier = when (u.activityLevel) {
+                "sedentary" -> 1.2f
+                "light" -> 1.375f
+                "moderate" -> 1.55f
+                "active" -> 1.725f
+                "very_active" -> 1.9f
+                else -> 1.2f
+            }
+            baseIntake * activityMultiplier / 1000 // Конвертируем в литры
+        } ?: 0f
+    }
+
+    val glassesCount = (recommendedWater * 4).toInt() // 1 стакан ≈ 250мл (0.25л)
+
+    val activityName = when (currentUser?.activityLevel) {
+        "sedentary" -> "Малоподвижный образ жизни"
+        "light" -> "Легкая активность (1-3 дня в неделю)"
+        "moderate" -> "Умеренная активность (3-5 дней)"
+        "active" -> "Высокая активность (6-7 дней)"
+        "very_active" -> "Очень высокая (ежедневные интенсивные тренировки)"
+        else -> "Неизвестно"
+    }
 
     Card(
         modifier = Modifier
@@ -566,16 +591,29 @@ fun WaterCard(user: com.example.healthmonitor.models.User) {
                 fontWeight = FontWeight.Bold
             )
 
-            Text(
-                text = "$waterNorm литров в день",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Рекомендация", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format("%.1f л", recommendedWater),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Text("💧", fontSize = 32.sp)
+            }
 
             Text(
-                text = "Это примерно ${(waterNormFloat * 1000).toInt() / 250} стаканов по 250мл",
-                fontSize = 14.sp,
+                text = "≈ $glassesCount стаканов по 250мл в день",
+                fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
