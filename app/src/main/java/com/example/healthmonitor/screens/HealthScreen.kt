@@ -548,17 +548,23 @@ fun BMICard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.U
 fun WaterCard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.User) {
     val currentUser by viewModel.currentUser.collectAsState()
 
-    // Пересчитываем рекомендуемое потребление воды с учетом активности
+    // Рекомендации ВОЗ с учетом пола и активности
     val recommendedWater = remember(currentUser) {
         currentUser?.let { u ->
-            val baseIntake = u.targetWeight * 30 // 30 мл на 1 кг
+            // Формула ВОЗ
+            val baseIntake = when (u.gender) {
+                "male" -> u.targetWeight * 35 // 35мл на 1кг для мужчин
+                "female" -> u.targetWeight * 31 // 31мл на 1кг для женщин
+                else -> u.targetWeight * 33
+            }
+
             val activityMultiplier = when (u.activityLevel) {
-                "sedentary" -> 1.2f
-                "light" -> 1.375f
-                "moderate" -> 1.55f
-                "active" -> 1.725f
-                "very_active" -> 1.9f
-                else -> 1.2f
+                "sedentary" -> 1.0f
+                "light" -> 1.2f
+                "moderate" -> 1.4f
+                "active" -> 1.6f
+                "very_active" -> 1.8f
+                else -> 1.0f
             }
             baseIntake * activityMultiplier / 1000 // Конвертируем в литры
         } ?: 0f
@@ -568,10 +574,10 @@ fun WaterCard(viewModel: HealthViewModel, user: com.example.healthmonitor.models
 
     val activityName = when (currentUser?.activityLevel) {
         "sedentary" -> "Малоподвижный образ жизни"
-        "light" -> "Легкая активность (1-3 дня в неделю)"
-        "moderate" -> "Умеренная активность (3-5 дней)"
-        "active" -> "Высокая активность (6-7 дней)"
-        "very_active" -> "Очень высокая (ежедневные интенсивные тренировки)"
+        "light" -> "Легкие тренировки 1–2 раза в неделю"
+        "moderate" -> "Умеренные тренировки 3–4 раза в неделю"
+        "active" -> "Активные тренировки 5+ раз в неделю"
+        "very_active" -> "Ежедневные интенсивные нагрузки"
         else -> "Неизвестно"
     }
 
@@ -612,10 +618,11 @@ fun WaterCard(viewModel: HealthViewModel, user: com.example.healthmonitor.models
             }
 
             Text(
-                text = "≈ $glassesCount стаканов по 250мл в день",
+                text = "≈ $glassesCount стаканов в день (250мл)",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
+
