@@ -294,11 +294,12 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
-    fun updateUser(name: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String, dailyStepGoal: Int) {
+    fun updateUser(name: String, gender: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String, dailyStepGoal: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val updatedUser = _currentUser.value?.copy(
                     name = name,
+                    gender = gender,
                     age = age,
                     heightCm = heightCm,
                     targetWeight = targetWeight,
@@ -315,6 +316,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
 
     fun deleteHealthData(healthData: HealthData) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -15,7 +15,6 @@ import com.example.healthmonitor.viewmodels.HealthViewModel
 @Composable
 fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
     val currentUser by viewModel.currentUser.collectAsState()
-    val healthDataList by viewModel.healthDataList.collectAsState()
 
     var showEditDialog by remember { mutableStateOf(false) }
 
@@ -48,8 +47,6 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
 
         currentUser?.let { user ->
             UserInfoCard(user)
-            CaloriesCard(viewModel, user)
-            LastHealthDataCard(healthDataList)
         }
     }
 
@@ -58,14 +55,15 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             EditProfileDialog(
                 user = user,
                 onDismiss = { showEditDialog = false },
-                onSave = { name, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal ->
-                    viewModel.updateUser(name, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal)
+                onSave = { name, gender, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal ->
+                    viewModel.updateUser(name, gender, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal)
                     showEditDialog = false
                 }
             )
         }
     }
 }
+
 
 @Composable
 fun UserInfoCard(user: User) {
@@ -86,6 +84,7 @@ fun UserInfoCard(user: User) {
             )
 
             InfoRow("Имя", user.name)
+            InfoRow("Пол", getGenderName(user.gender))
             InfoRow("Возраст", "${user.age} лет")
             InfoRow("Рост", "${user.heightCm} см")
             InfoRow("Целевой вес", "${user.targetWeight} кг")
@@ -94,6 +93,7 @@ fun UserInfoCard(user: User) {
         }
     }
 }
+
 
 @Composable
 fun CaloriesCard(viewModel: HealthViewModel, user: User) {
@@ -260,9 +260,10 @@ fun MetricBox(label: String, value: String, unit: String) {
 fun EditProfileDialog(
     user: User,
     onDismiss: () -> Unit,
-    onSave: (String, Int, Float, Float, String, String, Int) -> Unit
+    onSave: (String, String, Int, Float, Float, String, String, Int) -> Unit
 ) {
     var nameVal by remember { mutableStateOf(user.name) }
+    var genderVal by remember { mutableStateOf(user.gender) }
     var ageVal by remember { mutableStateOf(user.age.toString()) }
     var heightVal by remember { mutableStateOf(user.heightCm.toString()) }
     var targetWeightVal by remember { mutableStateOf(user.targetWeight.toString()) }
@@ -286,6 +287,22 @@ fun EditProfileDialog(
                     label = { Text("Имя") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Text("Пол:", fontWeight = FontWeight.Bold)
+                val genders = listOf("male", "female")
+                genders.forEach { gender ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                        RadioButton(
+                            selected = genderVal == gender,
+                            onClick = { genderVal = gender }
+                        )
+                        Text(
+                            text = getGenderName(gender),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
 
                 TextField(
                     value = ageVal,
@@ -351,6 +368,7 @@ fun EditProfileDialog(
                 onClick = {
                     onSave(
                         nameVal,
+                        genderVal,
                         ageVal.toIntOrNull() ?: user.age,
                         heightVal.toFloatOrNull() ?: user.heightCm,
                         targetWeightVal.toFloatOrNull() ?: user.targetWeight,
@@ -371,6 +389,12 @@ fun EditProfileDialog(
     )
 }
 
+fun getGenderName(gender: String): String = when(gender) {
+    "male" -> "Мужчина"
+    "female" -> "Женщина"
+    else -> "Не указано"
+}
+
 fun getActivityName(level: String): String = when(level) {
     "sedentary" -> "Малоподвижный образ жизни"
     "light" -> "Легкая активность (1-3 дня в неделю)"
@@ -381,8 +405,9 @@ fun getActivityName(level: String): String = when(level) {
 }
 
 fun getWeightGoalName(goal: String): String = when(goal) {
-    "lose" -> "📉 Сбросить вес"
-    "maintain" -> "➡️ Удерживать вес"
-    "gain" -> "📈 Набрать вес"
+    "lose" -> "Сбросить вес"
+    "maintain" -> "Удерживать вес"
+    "gain" -> "Набрать вес"
     else -> "Неизвестно"
 }
+

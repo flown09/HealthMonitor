@@ -353,6 +353,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                             if (currentUser != null) {
                                 viewModel.updateUser(
                                     name = currentUser.name,
+                                    gender = currentUser.gender,
                                     age = currentUser.age,
                                     heightCm = currentUser.heightCm,
                                     targetWeight = weight,
@@ -401,12 +402,11 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     ) {
                         Text("Удалить")
                     }
-
-
                 }
             }
         )
     }
+
 
 }
 
