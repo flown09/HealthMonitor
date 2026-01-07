@@ -31,8 +31,9 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
     var showAddFoodDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Заголовок и кнопки
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -62,9 +63,10 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             }
         }
 
+        // Список продуктов БЕЗ пустого пространства
         if (nutritionData.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
                 Text(
@@ -75,7 +77,9 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
@@ -107,6 +111,7 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         )
     }
 }
+
 
 @Composable
 fun CalorieSummaryCard(todayCalories: Int, dailyGoal: Int) {

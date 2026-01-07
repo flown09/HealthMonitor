@@ -38,6 +38,19 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     private val _todayCalories = MutableStateFlow(0)
     val todayCalories: StateFlow<Int> = _todayCalories.asStateFlow()
 
+    private fun updateTodayCalories() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val today = getTodayTimestamp()
+                val todayNutrition = _nutritionDataList.value.filter { it.date == today }
+                val totalCalories = todayNutrition.sumOf { it.calories }
+                _todayCalories.value = totalCalories
+                Log.d("HealthViewModel", "Today calories updated: $totalCalories")
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error updating today calories: ${e.message}")
+            }
+        }
+    }
     init {
         loadInitialData()
     }
@@ -183,6 +196,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             try {
                 repository.getNutritionDataByUser(userId).collect { data ->
                     _nutritionDataList.value = data
+                    updateTodayCalories()  // ← ДОБАВЬ ЭТОТ ВЫЗОВ
                 }
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error loading nutrition data: ${e.message}")
@@ -190,6 +204,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
 
     private fun loadFoods() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -276,11 +291,13 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 // Перезагружаем данные
                 val userId = _currentUser.value?.id ?: "user_1"
                 loadNutritionData(userId)
+                updateTodayCalories()  // ← ДОБАВЬ ЭТОТ ВЫЗОВ
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error adding nutrition data: ${e.message}")
             }
         }
     }
+
 
     fun addFood(name: String, calories: Int, protein: Float, carbs: Float, fat: Float, category: String) {
         viewModelScope.launch(Dispatchers.IO) {
