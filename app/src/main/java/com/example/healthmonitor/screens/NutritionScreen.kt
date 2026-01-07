@@ -127,11 +127,12 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             foods = foods,
             onDismiss = { showAddDialog = false },
             onAdd = { food, portion, mealType ->
-                viewModel.addNutritionData(food, portion, mealType)
-                showAddDialog = false
+                viewModel.addNutritionData(food, portion, mealType, selectedDate)
+                showAddDialog = false  // ← ВАЖНО: закрой диалог ПОСЛЕ добавления
             }
         )
     }
+
 
     if (showAddFoodDialog) {
         AddNewFoodDialog(

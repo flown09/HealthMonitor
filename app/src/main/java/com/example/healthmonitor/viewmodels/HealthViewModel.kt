@@ -271,14 +271,14 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     }
 
 
-    fun addNutritionData(food: Food, portionGrams: Float, mealType: String) {
+    fun addNutritionData(food: Food, portionGrams: Float, mealType: String, dateTimestamp: Long = getTodayTimestamp()) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val caloriesForPortion = (food.calories * portionGrams) / 100
 
                 val nutritionData = NutritionData(
                     userId = _currentUser.value?.id ?: "user_1",
-                    date = getTodayTimestamp(),
+                    date = dateTimestamp,  // ← Используй переданную дату
                     mealType = mealType,
                     foodName = food.name,
                     calories = caloriesForPortion.toInt(),
@@ -286,11 +286,10 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                     carbs = (food.carbs * portionGrams) / 100,
                     fat = (food.fat * portionGrams) / 100,
                     fiber = (food.fiber * portionGrams) / 100,
-                    portionGrams = portionGrams  // ← ДОБАВЬ ЭТО
+                    portionGrams = portionGrams
                 )
                 repository.insertNutritionData(nutritionData)
 
-                // Перезагружаем данные
                 val userId = _currentUser.value?.id ?: "user_1"
                 loadNutritionData(userId)
                 updateTodayCalories()
@@ -299,6 +298,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
 
 
 
