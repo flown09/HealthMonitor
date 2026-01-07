@@ -468,7 +468,20 @@ fun AddWeightDialog(
 
 @Composable
 fun BMICard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.User) {
-    val bmi = viewModel.calculateBMI()
+    // Наблюдаем за изменениями currentUser
+    val currentUser by viewModel.currentUser.collectAsState()
+
+    // Пересчитываем BMI когда изменяется currentUser
+    val bmi = remember(currentUser) {
+        currentUser?.let { u ->
+            if (u.heightCm > 0 && u.targetWeight > 0) {
+                u.targetWeight / ((u.heightCm / 100f) * (u.heightCm / 100f))
+            } else {
+                0f
+            }
+        } ?: 0f
+    }
+
     val bmiCategory = when {
         bmi < 18.5 -> "Недостаток веса"
         bmi < 25 -> "Нормальный вес"
@@ -527,6 +540,9 @@ fun BMICard(viewModel: HealthViewModel, user: com.example.healthmonitor.models.U
         }
     }
 }
+
+
+
 
 @Composable
 fun WaterCard(user: com.example.healthmonitor.models.User) {

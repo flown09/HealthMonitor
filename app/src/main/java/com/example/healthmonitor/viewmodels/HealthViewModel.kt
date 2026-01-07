@@ -162,6 +162,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 if (currentUser != null) {
                     val updatedUser = currentUser.copy(targetWeight = weight)
                     repository.updateUser(updatedUser)
+                    // ВАЖНО: обновляем _currentUser в памяти
                     _currentUser.value = updatedUser
                 }
 
@@ -172,6 +173,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
 
 
     fun addNutritionData(food: Food, portionGrams: Float, mealType: String) {
