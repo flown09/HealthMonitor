@@ -173,24 +173,29 @@ fun NutritionCard(nutrition: NutritionData, onDelete: (NutritionData) -> Unit) {
                 Column {
                     Text(
                         text = nutrition.foodName,
-                        fontSize = 14.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = nutrition.mealType,
+                        text = "${nutrition.portionGrams.toInt()}г",  // ← ДОБАВЬ ЭТО
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
                     text = "${nutrition.calories} ккал",
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 0.dp),  // ← Убери левый отступ
+                horizontalArrangement = Arrangement.SpaceEvenly  // ← Используй SpaceEvenly вместо spacedBy
+            ) {
                 MacroIndicator("Б", nutrition.protein.toInt())
                 MacroIndicator("Ж", nutrition.fat.toInt())
                 MacroIndicator("У", nutrition.carbs.toInt())
@@ -224,27 +229,28 @@ fun NutritionCard(nutrition: NutritionData, onDelete: (NutritionData) -> Unit) {
 }
 
 
+
+
 @Composable
 fun MacroIndicator(label: String, val1: Int) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth(0.33f)
-            .padding(4.dp),
+        modifier = Modifier.padding(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
     ) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = "${val1}г",
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold
         )
     }
 }
+
 
 
 @Composable
@@ -256,7 +262,7 @@ fun AddFoodDialog(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFood by remember { mutableStateOf<Food?>(null) }
     var portion by remember { mutableStateOf("100") }
-    var mealType by remember { mutableStateOf("breakfast") }
+    var mealType by remember { mutableStateOf("breakfast") }  // ← Оставляем по умолчанию, но скрываем из UI
 
     // Фильтруем продукты по поиску
     val filteredFoods = remember(searchQuery, foods) {
@@ -287,7 +293,7 @@ fun AddFoodDialog(
                     placeholder = { Text("Введите название...") }
                 )
 
-                // Список продуктов БЕЗ группировки
+                // Список продуктов
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -354,7 +360,7 @@ fun AddFoodDialog(
 
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-                // Порция
+                // Порция (БЕЗ "Прием пищи")
                 Text("Порция (г):", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 TextField(
                     value = portion,
@@ -363,40 +369,13 @@ fun AddFoodDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
-
-                // Прием пищи
-                Text("Прием пищи:", fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-                val mealTypes = listOf("breakfast", "lunch", "dinner", "snack")
-                val mealNames = listOf("Завтрак", "Обед", "Ужин", "Перекус")
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    mealTypes.forEachIndexed { index, meal ->
-                        Button(
-                            onClick = { mealType = meal },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(32.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (mealType == meal)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Text(mealNames[index], fontSize = 11.sp)
-                        }
-                    }
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     selectedFood?.let {
-                        onAdd(it, portion.toFloatOrNull() ?: 100f, mealType)
+                        onAdd(it, portion.toFloatOrNull() ?: 100f, "breakfast")  // ← Всегда "breakfast"
                     }
                 },
                 enabled = selectedFood != null
@@ -411,6 +390,7 @@ fun AddFoodDialog(
         }
     )
 }
+
 
 
 fun getCategoryName(category: String): String = when(category) {

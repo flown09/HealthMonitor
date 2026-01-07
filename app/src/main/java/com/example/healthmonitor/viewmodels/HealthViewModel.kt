@@ -284,19 +284,21 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                     protein = (food.protein * portionGrams) / 100,
                     carbs = (food.carbs * portionGrams) / 100,
                     fat = (food.fat * portionGrams) / 100,
-                    fiber = (food.fiber * portionGrams) / 100
+                    fiber = (food.fiber * portionGrams) / 100,
+                    portionGrams = portionGrams  // ← ДОБАВЬ ЭТО
                 )
                 repository.insertNutritionData(nutritionData)
 
                 // Перезагружаем данные
                 val userId = _currentUser.value?.id ?: "user_1"
                 loadNutritionData(userId)
-                updateTodayCalories()  // ← ДОБАВЬ ЭТОТ ВЫЗОВ
+                updateTodayCalories()
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error adding nutrition data: ${e.message}")
             }
         }
     }
+
 
 
     fun addFood(name: String, calories: Int, protein: Float, carbs: Float, fat: Float, category: String) {

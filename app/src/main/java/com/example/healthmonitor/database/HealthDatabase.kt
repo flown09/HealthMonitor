@@ -13,7 +13,7 @@ import android.util.Log
 
 @Database(
     entities = [User::class, HealthData::class, NutritionData::class, Food::class],
-    version = 8,  // ← Увеличили версию
+    version = 9,  // ← Увеличили версию
     exportSchema = false
 )
 abstract class HealthDatabase : RoomDatabase() {

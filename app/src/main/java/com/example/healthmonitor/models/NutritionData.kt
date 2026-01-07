@@ -16,5 +16,6 @@ data class NutritionData(
     val protein: Float,
     val carbs: Float,
     val fat: Float,
-    val fiber: Float
+    val fiber: Float,
+    val portionGrams: Float = 100f
 )
