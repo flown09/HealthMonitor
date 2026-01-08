@@ -19,11 +19,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.healthmonitor.database.HealthDatabase
 import com.example.healthmonitor.repository.HealthRepository
 import com.example.healthmonitor.screens.HealthScreen
@@ -33,6 +35,8 @@ import com.example.healthmonitor.ui.theme.HealthMonitorTheme
 import com.example.healthmonitor.utils.StepCounter
 import com.example.healthmonitor.viewmodels.HealthViewModel
 import com.example.healthmonitor.viewmodels.HealthViewModelFactory
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 class MainActivity : ComponentActivity() {
     private lateinit var stepCounter: StepCounter
@@ -85,6 +89,7 @@ class MainActivity : ComponentActivity() {
                 HealthMonitorApp(viewModel, stepCounter)
             }
         }
+
     }
 
     override fun onDestroy() {
@@ -100,6 +105,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HealthMonitorApp(viewModel: HealthViewModel, stepCounter: StepCounter) {
     val selectedTab = remember { mutableStateOf(0) }
+
+    // ← ДОБАВЬ ЭТО
+    LaunchedEffect(Unit) {
+        stepCounter.stepCount
+            .onEach { steps ->
+                viewModel.saveTodayStepsToDatabase(steps)
+            }
+            .launchIn(this)
+    }
 
     Scaffold(
         bottomBar = {

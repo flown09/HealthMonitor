@@ -180,6 +180,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 loadHealthData("user_1")
                 loadNutritionData("user_1")
                 loadFoods()
+                // ← НЕ ДОБАВЛЯЕМ никакие данные со значениями 0
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error creating default user: ${e.message}", e)
             }
@@ -206,7 +207,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             try {
                 repository.getNutritionDataByUser(userId).collect { data ->
                     _nutritionDataList.value = data
-                    updateTodayCalories()  // ← ДОБАВЬ ЭТОТ ВЫЗОВ
+                    updateTodayCalories()
                 }
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error loading nutrition data: ${e.message}")
@@ -263,6 +264,45 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
+    fun saveTodayStepsToDatabase(steps: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val healthData = HealthData(
+                    userId = _currentUser.value?.id ?: "user_1",
+                    date = getTodayTimestamp(),
+                    weight = 0f,
+                    heartRate = 0,
+                    bloodPressureSystolic = 0,
+                    bloodPressureDiastolic = 0,
+                    steps = steps,
+                    sleepHours = 0f,
+                    waterIntakeL = 0f
+                )
+
+                // Проверяем есть ли уже запись за сегодня
+                val existingToday = _healthDataList.value.find { it.date == getTodayTimestamp() }
+
+                if (existingToday != null) {
+                    // Обновляем только шаги, сохраняем остальное
+                    repository.updateHealthData(
+                        existingToday.copy(
+                            steps = steps,
+                            weight = if (existingToday.weight > 0) existingToday.weight else 0f
+                        )
+                    )
+                } else {
+                    // Не добавляем новую запись со значениями 0
+                    Log.d("HealthViewModel", "No health data for today, skipping save")
+                }
+
+                val userId = _currentUser.value?.id ?: "user_1"
+                loadHealthData(userId)
+                Log.d("HealthViewModel", "Saved $steps steps to database")
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error saving steps: ${e.message}")
+            }
+        }
+    }
 
     fun calculateWaterIntake(): Float {
         val user = _currentUser.value ?: return 0f
@@ -288,7 +328,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
                 val nutritionData = NutritionData(
                     userId = _currentUser.value?.id ?: "user_1",
-                    date = dateTimestamp,  // ← Используй переданную дату
+                    date = dateTimestamp,
                     mealType = mealType,
                     foodName = food.name,
                     calories = caloriesForPortion.toInt(),
@@ -342,19 +382,19 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
     fun calculateBMI(): Float {
         val user = _currentUser.value ?: return 0f
-        val lastHealth = _healthDataList.value.firstOrNull() ?: return 0f
+        val lastHealth = _healthDataList.value.filter { it.weight > 0 }.lastOrNull() ?: return 0f
         return HealthCalculations.calculateBMI(lastHealth.weight, user.heightCm)
     }
 
     fun calculateDailyCalories(): Int {
         val user = _currentUser.value ?: return 0
-        val lastHealth = _healthDataList.value.lastOrNull()  // ← Было firstOrNull(), теперь lastOrNull()
+        val lastHealth = _healthDataList.value.filter { it.weight > 0 }.lastOrNull()
         val weight = lastHealth?.weight ?: user.targetWeight
 
         Log.d("HealthViewModel", "BMR calculation - weight: $weight, age: ${user.age}, height: ${user.heightCm}")
 
         val bmr = HealthCalculations.calculateBMR(
-            user.age,  // ← Передай просто age, не age * 365
+            user.age,
             weight,
             user.heightCm,
             user.gender == "male"
@@ -386,12 +426,10 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     fun calculateDailyMacros(): Triple<Int, Int, Int> {
         val dailyCalories = calculateDailyCalories()
 
-        // Стандартное распределение: 30% белки, 20% жиры, 50% углеводы
         val proteinCalories = dailyCalories * 0.30f
         val fatCalories = dailyCalories * 0.20f
         val carbsCalories = dailyCalories * 0.50f
 
-        // Конвертируем в граммы (1г = 4 ккал для белков и углеводов, 1г = 9 ккал для жиров)
         val protein = (proteinCalories / 4).toInt()
         val fat = (fatCalories / 9).toInt()
         val carbs = (carbsCalories / 4).toInt()
@@ -438,14 +476,11 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     fun deleteHealthData(healthData: HealthData) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Сразу удаляем из текущего списка в памяти
                 val updatedList = _healthDataList.value.filter { it.id != healthData.id }
                 _healthDataList.value = updatedList
 
-                // Затем удаляем из БД
                 repository.deleteHealthData(healthData)
 
-                // И перезагружаем с БД для синхронизации
                 delay(300)
                 val userId = _currentUser.value?.id ?: "user_1"
                 loadHealthData(userId)
@@ -458,17 +493,13 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     fun deleteNutritionData(nutrition: NutritionData) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Сразу удаляем из текущего списка в памяти
                 val updatedList = _nutritionDataList.value.filter { it.id != nutrition.id }
                 _nutritionDataList.value = updatedList
 
-                // Обновляем калории
                 updateTodayCalories()
 
-                // Затем удаляем из БД
                 repository.deleteNutritionData(nutrition)
 
-                // И перезагружаем с БД для синхронизации
                 delay(300)
                 val userId = _currentUser.value?.id ?: "user_1"
                 loadNutritionData(userId)
@@ -477,6 +508,4 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
-
-
 }
