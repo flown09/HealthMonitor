@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import java.util.Calendar
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.PaddingValues
+import com.example.healthmonitor.models.User
 
 
 @Composable
@@ -415,7 +416,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     if (showWeightDialog) {
         AddWeightDialog(
             onDismiss = { showWeightDialog = false },
-            onAdd = { weight ->
+            onAdd = { weight, dateTimestamp ->  // ← ДОБАВЬ параметр даты
                 viewModel.addHealthData(
                     weight = weight,
                     heartRate = 0,
@@ -423,12 +424,16 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     dia = 0,
                     steps = 0,
                     sleep = 0f,
-                    water = 0f
+                    water = 0f,
+                    dateTimestamp = dateTimestamp  // ← ДОБАВЬ параметр
                 )
                 showWeightDialog = false
-            }
+            },
+            healthDataList = healthDataList,  // ← ДОБАВЬ
+            currentUser = currentUser  // ← ДОБАВЬ
         )
     }
+
 
     // Диалог редактирования веса при долгом нажатии
     if (showWeightDetailsDialog && selectedWeightData != null) {
@@ -536,9 +541,17 @@ fun formatDate(timestamp: Long): String {
 @Composable
 fun AddWeightDialog(
     onDismiss: () -> Unit,
-    onAdd: (Float) -> Unit
+    onAdd: (Float, Long) -> Unit,
+    healthDataList: List<HealthData>,
+    currentUser: User?
 ) {
     var weightVal by remember { mutableStateOf("") }
+    var selectedDate by remember { mutableStateOf(getTodayTimestamp()) }
+    val today = getTodayTimestamp()
+
+    val hasWeightForSelectedDate = remember(healthDataList, selectedDate) {
+        healthDataList.any { it.date == selectedDate && it.weight > 0 }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -548,11 +561,83 @@ fun AddWeightDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // ← СНАЧАЛА выбор даты
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            val calendar = Calendar.getInstance()
+                            calendar.timeInMillis = selectedDate
+                            calendar.add(Calendar.DAY_OF_YEAR, -1)
+                            calendar.set(Calendar.HOUR_OF_DAY, 0)
+                            calendar.set(Calendar.MINUTE, 0)
+                            calendar.set(Calendar.SECOND, 0)
+                            calendar.set(Calendar.MILLISECOND, 0)
+                            selectedDate = calendar.timeInMillis
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text("◄", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Column(
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = formatDateShort(selectedDate),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (hasWeightForSelectedDate) {
+                            Text(
+                                text = "Уже есть запись",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val calendar = Calendar.getInstance()
+                            calendar.timeInMillis = selectedDate
+                            calendar.add(Calendar.DAY_OF_YEAR, 1)
+                            calendar.set(Calendar.HOUR_OF_DAY, 0)
+                            calendar.set(Calendar.MINUTE, 0)
+                            calendar.set(Calendar.SECOND, 0)
+                            calendar.set(Calendar.MILLISECOND, 0)
+
+                            if (calendar.timeInMillis <= today) {
+                                selectedDate = calendar.timeInMillis
+                            }
+                        },
+                        enabled = selectedDate < today,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text(
+                            "►",
+                            fontSize = 16.sp,
+                            color = if (selectedDate < today)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+
+                // ← ПОТОМ вес
                 Text(
                     text = "Введите свой вес в килограммах",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 TextField(
                     value = weightVal,
                     onValueChange = { weightVal = it },
@@ -565,8 +650,11 @@ fun AddWeightDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onAdd(weightVal.toFloatOrNull() ?: 70f)
-                }
+                    if (weightVal.isNotEmpty() && !hasWeightForSelectedDate) {
+                        onAdd(weightVal.toFloatOrNull() ?: 70f, selectedDate)
+                    }
+                },
+                enabled = weightVal.isNotEmpty() && !hasWeightForSelectedDate
             ) {
                 Text("Добавить")
             }

@@ -230,14 +230,23 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
-    fun addHealthData(weight: Float, heartRate: Int, sys: Int, dia: Int, steps: Int, sleep: Float, water: Float) {
+    fun addHealthData(
+        weight: Float,
+        heartRate: Int,
+        sys: Int,
+        dia: Int,
+        steps: Int,
+        sleep: Float,
+        water: Float,
+        dateTimestamp: Long = getTodayTimestamp()  // ← ДОБАВЬ параметр даты
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                Log.d("HealthViewModel", "Adding health data with weight: $weight")
+                Log.d("HealthViewModel", "Adding health data with weight: $weight for date: $dateTimestamp")
 
                 val healthData = HealthData(
                     userId = _currentUser.value?.id ?: "user_1",
-                    date = getTodayTimestamp(),
+                    date = dateTimestamp,  // ← ИСПОЛЬЗУЙ переданную дату
                     weight = weight,
                     heartRate = heartRate,
                     bloodPressureSystolic = sys,
@@ -250,7 +259,8 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
                 val userId = _currentUser.value?.id ?: "user_1"
                 val currentUser = _currentUser.value
-                if (currentUser != null) {
+                if (currentUser != null && dateTimestamp == getTodayTimestamp()) {
+                    // Обновляем профиль только если это запись за сегодня
                     val updatedUser = currentUser.copy(targetWeight = weight)
                     repository.updateUser(updatedUser)
                     _currentUser.value = updatedUser
@@ -263,6 +273,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
+
 
     fun saveTodayStepsToDatabase(steps: Int) {
         viewModelScope.launch(Dispatchers.IO) {
