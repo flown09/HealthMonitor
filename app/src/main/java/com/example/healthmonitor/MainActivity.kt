@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -109,7 +110,6 @@ class MainActivity : ComponentActivity() {
 fun HealthMonitorApp(viewModel: HealthViewModel, stepCounter: StepCounter) {
     val selectedTab = remember { mutableStateOf(0) }
 
-    // ← ДОБАВЬ ЭТО
     LaunchedEffect(Unit) {
         stepCounter.stepCount
             .onEach { steps ->
@@ -123,19 +123,19 @@ fun HealthMonitorApp(viewModel: HealthViewModel, stepCounter: StepCounter) {
             NavigationBar {
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Favorite, contentDescription = "Здоровье") },
-                    label = { Text("Здоровье") },
+                    label = { Text("Здоровье", color = if (selectedTab.value == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
                     selected = selectedTab.value == 2,
                     onClick = { selectedTab.value = 2 }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Person, contentDescription = "Питание") },
-                    label = { Text("Питание") },
+                    label = { Text("Питание", color = if (selectedTab.value == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
                     selected = selectedTab.value == 1,
                     onClick = { selectedTab.value = 1 }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Home, contentDescription = "Профиль") },
-                    label = { Text("Профиль") },
+                    label = { Text("Профиль", color = if (selectedTab.value == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
                     selected = selectedTab.value == 0,
                     onClick = { selectedTab.value = 0 }
                 )
