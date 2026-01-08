@@ -21,7 +21,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun HealthMonitorTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
