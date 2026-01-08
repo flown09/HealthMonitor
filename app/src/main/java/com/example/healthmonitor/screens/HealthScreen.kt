@@ -224,6 +224,15 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     val sortedData = healthDataList.sortedBy { it.date }
     val lastWeights = sortedData.filter { it.weight > 0 }
 
+    val maxItemsToShow = 7
+
+    // ← ОБНОВЛЯЕМ scrollPosition когда меняются данные
+    LaunchedEffect(lastWeights.size) {
+        if (lastWeights.size > maxItemsToShow) {
+            scrollPosition = lastWeights.size - maxItemsToShow
+        }
+    }
+
     val currentWeight = if (lastWeights.isNotEmpty())
         lastWeights.last().weight
     else
@@ -236,7 +245,6 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
 
     val weightChange = currentWeight - previousWeight
 
-    val maxItemsToShow = 7
     val chartsData = if (lastWeights.size > maxItemsToShow) {
         lastWeights.drop(scrollPosition).take(maxItemsToShow)
     } else {
