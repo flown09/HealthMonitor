@@ -284,6 +284,8 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     if (showEditDialog && selectedIndex >= 0 && selectedIndex < chartsData.size) {
         val selectedData = chartsData[selectedIndex]
         var showDeleteConfirm by remember { mutableStateOf(false) }
+        var isEditMode by remember { mutableStateOf(false) }
+        var editedWeight by remember { mutableStateOf(String.format("%.1f", selectedData.weight)) }
 
         if (showDeleteConfirm) {
             AlertDialog(
@@ -308,6 +310,62 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     }
                 }
             )
+        } else if (isEditMode) {
+            // ДИАЛОГ РЕДАКТИРОВАНИЯ ВЕСА
+            AlertDialog(
+                onDismissRequest = { isEditMode = false },
+                title = { Text("Изменить вес") },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Дата: ${formatDateShort(selectedData.date)}",
+                            fontSize = 14.sp
+                        )
+                        TextField(
+                            value = editedWeight,
+                            onValueChange = { editedWeight = it },
+                            label = { Text("Вес (кг)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val newWeight = editedWeight.toFloatOrNull()
+                            if (newWeight != null && newWeight > 0) {
+                                viewModel.deleteHealthData(selectedData)
+                                viewModel.addHealthData(
+                                    weight = newWeight,
+                                    heartRate = 0,
+                                    sys = 0,
+                                    dia = 0,
+                                    steps = 0,
+                                    sleep = 0f,
+                                    water = 0f,
+                                    dateTimestamp = selectedData.date
+                                )
+                                isEditMode = false
+                                showEditDialog = false
+                                selectedIndex = -1
+                            }
+
+                        },
+                        enabled = editedWeight.toFloatOrNull() != null && editedWeight.toFloatOrNull()!! > 0
+                    ) {
+                        Text("Сохранить")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { isEditMode = false }) {
+                        Text("Отмена")
+                    }
+                }
+            )
         } else {
             AlertDialog(
                 onDismissRequest = { showEditDialog = false },
@@ -322,22 +380,36 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                 },
                 confirmButton = {
                     Button(
-                        onClick = { showDeleteConfirm = true },
+                        onClick = { isEditMode = true },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("Удалить")
+                        Text("Редактировать")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showEditDialog = false }) {
-                        Text("Закрыть")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(onClick = { showEditDialog = false }) {
+                            Text("Закрыть")
+                        }
+                        Button(
+                            onClick = { showDeleteConfirm = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Удалить")
+                        }
                     }
                 }
             )
         }
     }
+
 
     Card(
         modifier = Modifier
