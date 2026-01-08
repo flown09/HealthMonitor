@@ -516,7 +516,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     ) {
                         chartsData.forEach { data ->
                             Text(
-                                text = String.format("%.0f", data.weight),
+                                text = formatWeight(data.weight),
                                 fontSize = 8.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.weight(1f),
@@ -549,6 +549,16 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     }
 }
 
+// Добавь эту функцию в файл
+fun formatWeight(weight: Float): String {
+    return if (weight == weight.toInt().toFloat()) {
+        // Если вес целое число, показываем без дробной части
+        weight.toInt().toString()
+    } else {
+        // Иначе показываем одно или два знака после запятой
+        String.format("%.1f", weight).trimEnd('0').trimEnd('.')
+    }
+}
 
 
 // Функция для форматирования даты
