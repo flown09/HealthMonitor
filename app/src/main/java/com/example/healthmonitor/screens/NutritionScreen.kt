@@ -36,11 +36,14 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
     val foods by viewModel.foods.collectAsState()
     val nutritionData by viewModel.nutritionDataList.collectAsState()
     val todayCalories by viewModel.todayCalories.collectAsState()
-    val todayMacros by viewModel.todayMacros.collectAsState()  // ← ДОБАВЬ ЭТО
+    val todayMacros by viewModel.todayMacros.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddFoodDialog by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(getTodayTimestamp()) }
+
+    // ← ПОЛУЧАЕМ СЕГОДНЯ
+    val todayTimestamp = getTodayTimestamp()
 
     val nutritionForSelectedDate = remember(nutritionData, selectedDate) {
         nutritionData.filter { it.date == selectedDate }
@@ -50,7 +53,6 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         nutritionForSelectedDate.sumOf { it.calories }
     }
 
-    // ← ДОБАВЬ РАСЧЕТ БЖУ ДЛЯ ВЫБРАННОЙ ДАТЫ
     val selectedDateMacros = remember(nutritionForSelectedDate) {
         Triple(
             nutritionForSelectedDate.sumOf { it.protein.toInt() },
@@ -77,7 +79,8 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         item {
             DatePickerRow(
                 selectedDate = selectedDate,
-                onDateSelected = { selectedDate = it }
+                onDateSelected = { selectedDate = it },
+                todayTimestamp = todayTimestamp  // ← ПЕРЕДАЁМ СЕГОДНЯ
             )
         }
 
@@ -85,7 +88,6 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             CalorieSummaryCard(selectedDateCalories, viewModel.calculateDailyCalories())
         }
 
-        // ← ДОБАВЬ НОВУЮ КАРТОЧКУ С БЖУ
         item {
             MacroSummaryCard(
                 selectedDateMacros,
@@ -97,7 +99,8 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { showAddDialog = true },
-                    modifier = Modifier.weight(weight = 1f).height(40.dp)
+                    modifier = Modifier.weight(weight = 1f).height(40.dp),
+                    enabled = selectedDate <= todayTimestamp  // ← ОТКЛЮЧАЕМ ДЛЯ БУДУЩИХ ДАТ
                 ) {
                     Text("Добавить еду")
                 }
@@ -157,6 +160,7 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         )
     }
 }
+
 
 @Composable
 fun MacroSummaryCard(
@@ -284,22 +288,28 @@ fun MacroBar(
 }
 
 
-// Компонент выбора даты - БЕЗ своего Arrangement.spacedBy
 @Composable
 fun DatePickerRow(
     selectedDate: Long,
-    onDateSelected: (Long) -> Unit
+    onDateSelected: (Long) -> Unit,
+    todayTimestamp: Long
 ) {
     val calendar = Calendar.getInstance()
     calendar.timeInMillis = selectedDate
 
     val dateFormatter = remember { SimpleDateFormat("dd MMM", Locale("ru")) }
-    val dateString = remember(selectedDate) { dateFormatter.format(Date(selectedDate)) }
+    val dateString = remember(selectedDate, todayTimestamp) {
+        if (selectedDate == todayTimestamp) {
+            "Сегодня"
+        } else {
+            dateFormatter.format(Date(selectedDate))
+        }
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),  // ← Было 8.dp, теперь 4.dp
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
@@ -339,6 +349,7 @@ fun DatePickerRow(
                 calendar.set(Calendar.MILLISECOND, 0)
                 onDateSelected(calendar.timeInMillis)
             },
+            enabled = selectedDate < todayTimestamp,
             modifier = Modifier.height(36.dp).width(50.dp),
             contentPadding = PaddingValues(0.dp)
         ) {
@@ -346,6 +357,8 @@ fun DatePickerRow(
         }
     }
 }
+
+
 
 
 // Helper функция для получения today timestamp
