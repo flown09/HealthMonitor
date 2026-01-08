@@ -2,6 +2,7 @@ package com.example.healthmonitor.screens
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +24,8 @@ import kotlinx.coroutines.delay
 import java.util.Calendar
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import com.example.healthmonitor.models.User
 
 
@@ -213,11 +216,13 @@ fun formatDateShort(timestamp: Long): String {
 
 @Composable
 fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewModel, currentUser: com.example.healthmonitor.models.User?) {
-    // Используем collectAsState для реактивного обновления
     val healthDataList by viewModel.healthDataList.collectAsState()
+    var scrollPosition by remember { mutableStateOf(0) }
+    var selectedIndex by remember { mutableStateOf(-1) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     val sortedData = healthDataList.sortedBy { it.date }
-    val lastWeights = sortedData.takeLast(7)
+    val lastWeights = sortedData.filter { it.weight > 0 }
 
     val currentWeight = if (lastWeights.isNotEmpty())
         lastWeights.last().weight
@@ -228,18 +233,99 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
         lastWeights[lastWeights.size - 2].weight
     else
         currentWeight
+
     val weightChange = currentWeight - previousWeight
 
-    var showWeightDialog by remember { mutableStateOf(false) }
-    var selectedWeightIndex by remember { mutableStateOf(-1) }
-    var showWeightDetailsDialog by remember { mutableStateOf(false) }
-    var selectedWeight by remember { mutableStateOf(0f) }
-    var selectedWeightData by remember { mutableStateOf<HealthData?>(null) }
+    val maxItemsToShow = 7
+    val chartsData = if (lastWeights.size > maxItemsToShow) {
+        lastWeights.drop(scrollPosition).take(maxItemsToShow)
+    } else {
+        lastWeights
+    }
 
-    // Очищаем выделение когда изменился список
-    LaunchedEffect(lastWeights.size) {
-        selectedWeightIndex = -1
-        selectedWeightData = null
+    val canScrollLeft = scrollPosition > 0
+    val canScrollRight = (scrollPosition + maxItemsToShow) < lastWeights.size
+
+    var showWeightDialog by remember { mutableStateOf(false) }
+
+    if (showWeightDialog) {
+        AddWeightDialog(
+            onDismiss = { showWeightDialog = false },
+            onAdd = { weight, dateTimestamp ->
+                viewModel.addHealthData(
+                    weight = weight,
+                    heartRate = 0,
+                    sys = 0,
+                    dia = 0,
+                    steps = 0,
+                    sleep = 0f,
+                    water = 0f,
+                    dateTimestamp = dateTimestamp
+                )
+                showWeightDialog = false
+            },
+            healthDataList = healthDataList,
+            currentUser = currentUser
+        )
+    }
+
+    // Диалог редактирования
+    if (showEditDialog && selectedIndex >= 0 && selectedIndex < chartsData.size) {
+        val selectedData = chartsData[selectedIndex]
+        var showDeleteConfirm by remember { mutableStateOf(false) }
+
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("Удалить запись?") },
+                text = { Text("Вы уверены? Запись будет удалена безвозвратно.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteHealthData(selectedData)
+                            showEditDialog = false
+                            showDeleteConfirm = false
+                            selectedIndex = -1
+                        }
+                    ) {
+                        Text("Удалить")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text("Отмена")
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                title = { Text("Запись о весе") },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Дата: ${formatDateShort(selectedData.date)}")
+                        Text("Вес: ${String.format("%.1f", selectedData.weight)} кг")
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Удалить")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditDialog = false }) {
+                        Text("Закрыть")
+                    }
+                }
+            )
+        }
     }
 
     Card(
@@ -249,286 +335,221 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Отслеживание веса",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
+                Column {
+                    Text(
+                        text = "Отслеживание веса",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Button(
                     onClick = { showWeightDialog = true },
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.height(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("+ Добавить", fontSize = 12.sp)
+                    Text(
+                        text = "+ Добавить",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
-            if (lastWeights.isNotEmpty() || currentWeight > 0) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Текущий вес", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            text = String.format("%.1f кг", currentWeight),
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Column(
-                        horizontalAlignment = androidx.compose.ui.Alignment.End
-                    ) {
-                        Text("Изменение", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val changeColor = if (weightChange <= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                        val changeSymbol = if (weightChange <= 0) "↓" else "↑"
-                        Text(
-                            text = "$changeSymbol ${String.format("%.1f кг", kotlin.math.abs(weightChange))}",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = changeColor
-                        )
-                    }
-                }
-
-                // Мини-график (столбцы) с интерактивностью
-                if (lastWeights.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(100.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = androidx.compose.ui.Alignment.Bottom
-                        ) {
-                            val minWeight = lastWeights.minOf { it.weight } - 2
-                            val maxWeight = lastWeights.maxOf { it.weight } + 2
-                            val range = maxWeight - minWeight
-
-                            lastWeights.forEachIndexed { index, data ->
-                                val normalizedHeight = ((data.weight - minWeight) / range * 80).coerceIn(5f, 80f)
-                                val isSelected = selectedWeightIndex == index
-
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(normalizedHeight.dp)
-                                        .background(
-                                            color = if (isSelected)
-                                                MaterialTheme.colorScheme.secondary
-                                            else
-                                                MaterialTheme.colorScheme.primary,
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onPress = {
-                                                    val pressStart = System.currentTimeMillis()
-                                                    tryAwaitRelease()
-                                                    val pressDuration = System.currentTimeMillis() - pressStart
-
-                                                    if (pressDuration < 500) {
-                                                        // Короткое нажатие - показываем значение
-                                                        selectedWeightIndex = index
-                                                        selectedWeight = data.weight
-                                                        selectedWeightData = data
-                                                    } else {
-                                                        // Долгое нажатие - открываем диалог редактирования
-                                                        selectedWeightIndex = index
-                                                        selectedWeight = data.weight
-                                                        selectedWeightData = data
-                                                        showWeightDetailsDialog = true
-                                                    }
-                                                }
-                                            )
-                                        }
-                                        .animateContentSize()
-                                )
-                            }
-                        }
-
-                        // Показываем значение выбранного столбца
-                        if (selectedWeightIndex >= 0 && selectedWeightIndex < lastWeights.size) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .padding(8.dp),
-                                contentAlignment = androidx.compose.ui.Alignment.Center
-                            ) {
-                                // Используем data из lastWeights напрямую, а не selectedWeight
-                                val displayWeight = lastWeights.getOrNull(selectedWeightIndex)
-                                Text(
-                                    text = "${String.format("%.1f кг", displayWeight?.weight ?: selectedWeight)} • ${formatDate(displayWeight?.date ?: 0)}",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-                    }
-
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
-                        text = "Последние ${lastWeights.size} записей • Нажмите на столбец для просмотра, долгое нажатие для редактирования",
-                        fontSize = 11.sp,
+                        text = "Текущий вес",
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = String.format("%.1f кг", currentWeight),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
-            } else {
+                Spacer(modifier = Modifier.weight(1f))
+
+                Column(
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(
+                        text = "Изменение",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${if (weightChange > 0) "↑" else if (weightChange < 0) "↓" else "→"} ${String.format("%.1f кг", kotlin.math.abs(weightChange))}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (weightChange > 0) MaterialTheme.colorScheme.error else if (weightChange < 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // ГРАФИК С ФИКСИРОВАННОЙ ВЫСОТОЙ
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Левая стрелка
+                    IconButton(
+                        onClick = {
+                            if (canScrollLeft) {
+                                scrollPosition -= 1
+                            }
+                        },
+                        enabled = canScrollLeft,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text(
+                            "◀",
+                            fontSize = 16.sp,
+                            color = if (canScrollLeft) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                    }
+
+                    // График
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            if (chartsData.isNotEmpty()) {
+                                val maxWeight = chartsData.maxOf { it.weight }
+                                val minWeight = chartsData.minOf { it.weight }
+                                val range = maxWeight - minWeight
+                                val safeRange = if (range < 1) 2f else range
+
+                                chartsData.forEachIndexed { index, data ->
+                                    val heightPercent = if (safeRange > 0) {
+                                        ((data.weight - minWeight) / safeRange * 0.85f) + 0.15f
+                                    } else {
+                                        0.5f
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight(heightPercent)
+                                            .background(
+                                                color = if (index == selectedIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.9f) else MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
+                                            )
+                                            .clickable {
+                                                selectedIndex = index
+                                                showEditDialog = true
+                                            }
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "Нет данных",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterVertically)
+                                )
+                            }
+                        }
+                    }
+
+                    // Правая стрелка
+                    IconButton(
+                        onClick = {
+                            if (canScrollRight) {
+                                scrollPosition += 1
+                            }
+                        },
+                        enabled = canScrollRight,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text(
+                            "▶",
+                            fontSize = 16.sp,
+                            color = if (canScrollRight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+
+                // ТЕКСТ С ЗНАЧЕНИЯМИ ОТДЕЛЬНО ПОД ГРАФИКОМ
+                if (chartsData.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 40.dp, end = 40.dp, top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        chartsData.forEach { data ->
+                            Text(
+                                text = String.format("%.0f", data.weight),
+                                fontSize = 8.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Последние записи
+            if (lastWeights.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(12.dp)
                 ) {
                     Text(
-                        text = "Нет данных о весе",
-                        fontSize = 14.sp,
+                        text = "${lastWeights.size} ${if (lastWeights.size % 10 == 1 && lastWeights.size % 100 != 11) "запись" else "записей"} • Нажмите на столбец для редактирования",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
     }
-
-    if (showWeightDialog) {
-        AddWeightDialog(
-            onDismiss = { showWeightDialog = false },
-            onAdd = { weight, dateTimestamp ->  // ← ДОБАВЬ параметр даты
-                viewModel.addHealthData(
-                    weight = weight,
-                    heartRate = 0,
-                    sys = 0,
-                    dia = 0,
-                    steps = 0,
-                    sleep = 0f,
-                    water = 0f,
-                    dateTimestamp = dateTimestamp  // ← ДОБАВЬ параметр
-                )
-                showWeightDialog = false
-            },
-            healthDataList = healthDataList,  // ← ДОБАВЬ
-            currentUser = currentUser  // ← ДОБАВЬ
-        )
-    }
-
-
-    // Диалог редактирования веса при долгом нажатии
-    if (showWeightDetailsDialog && selectedWeightData != null) {
-        var newWeight by remember { mutableStateOf(selectedWeight.toString()) }
-
-        AlertDialog(
-            onDismissRequest = { showWeightDetailsDialog = false },
-            title = {
-                Text("Редактировать вес")
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Дата: ${formatDate(selectedWeightData!!.date)}",
-                        fontSize = 14.sp
-                    )
-                    TextField(
-                        value = newWeight,
-                        onValueChange = { newWeight = it },
-                        label = { Text("Вес (кг)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val weight = newWeight.toFloatOrNull() ?: selectedWeight
-                        selectedWeightData?.let { data ->
-                            viewModel.updateHealthData(data.copy(weight = weight))
-
-                            // Обновляем профиль используя существующую функцию
-                            val currentUser = viewModel.currentUser.value
-                            if (currentUser != null) {
-                                viewModel.updateUser(
-                                    name = currentUser.name,
-                                    gender = currentUser.gender,
-                                    age = currentUser.age,
-                                    heightCm = currentUser.heightCm,
-                                    targetWeight = weight,
-                                    activityLevel = currentUser.activityLevel,
-                                    weightGoal = currentUser.weightGoal,
-                                    dailyStepGoal = currentUser.dailyStepGoal
-                                )
-                            }
-                        }
-                        showWeightDetailsDialog = false
-                        selectedWeightIndex = -1
-                        selectedWeightData = null
-                    }
-                ) {
-                    Text("Сохранить")
-                }
-            },
-            dismissButton = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            showWeightDetailsDialog = false
-                            selectedWeightIndex = -1
-                            selectedWeightData = null
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Отмена")
-                    }
-                    Button(
-                        onClick = {
-                            selectedWeightData?.let { data ->
-                                viewModel.deleteHealthData(data)
-                            }
-                            showWeightDetailsDialog = false
-                            selectedWeightIndex = -1
-                            selectedWeightData = null
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Удалить")
-                    }
-                }
-            }
-        )
-    }
-
-
 }
+
+
 
 // Функция для форматирования даты
 fun formatDate(timestamp: Long): String {

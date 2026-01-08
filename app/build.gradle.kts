@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.ui.graphics)
     kapt(libs.androidx.room.compiler)
 
     // Charts
