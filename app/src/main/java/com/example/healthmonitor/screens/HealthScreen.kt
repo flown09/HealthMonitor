@@ -381,6 +381,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                 confirmButton = {
                     Button(
                         onClick = { isEditMode = true },
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
@@ -390,14 +391,20 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                 },
                 dismissButton = {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        TextButton(onClick = { showEditDialog = false }) {
+                        TextButton(
+                            onClick = { showEditDialog = false },
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text("Закрыть")
                         }
                         Button(
                             onClick = { showDeleteConfirm = true },
+                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
@@ -408,6 +415,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                 }
             )
         }
+
     }
 
 
