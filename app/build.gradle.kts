@@ -43,6 +43,7 @@ android {
 dependencies {
     // Google Play Services для активности пользователя
     implementation("com.google.android.gms:play-services-fitness:21.1.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
     // AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
