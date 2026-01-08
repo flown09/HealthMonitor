@@ -484,11 +484,32 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 delay(300)
                 val userId = _currentUser.value?.id ?: "user_1"
                 loadHealthData(userId)
+
+                // ← ДОБАВЬ ЭТО: если удалили запись с весом, обновляем профиль
+                if (healthData.weight > 0) {
+                    val allWeightData = _healthDataList.value.filter { it.weight > 0 }.sortedBy { it.date }
+
+                    if (allWeightData.isNotEmpty()) {
+                        // Есть другие записи - берём последнюю
+                        val lastWeight = allWeightData.last().weight
+                        val currentUser = _currentUser.value
+                        if (currentUser != null) {
+                            val updatedUser = currentUser.copy(targetWeight = lastWeight)
+                            repository.updateUser(updatedUser)
+                            _currentUser.value = updatedUser
+                            Log.d("HealthViewModel", "Updated targetWeight to: $lastWeight after deletion")
+                        }
+                    } else {
+                        // Нет других записей - оставляем старый targetWeight
+                        Log.d("HealthViewModel", "No more weight records, keeping current targetWeight")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("HealthViewModel", "Error deleting health data: ${e.message}")
             }
         }
     }
+
 
     fun deleteNutritionData(nutrition: NutritionData) {
         viewModelScope.launch(Dispatchers.IO) {

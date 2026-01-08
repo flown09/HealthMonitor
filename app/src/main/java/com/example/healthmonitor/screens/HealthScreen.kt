@@ -218,8 +218,15 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     val sortedData = healthDataList.sortedBy { it.date }
     val lastWeights = sortedData.takeLast(7)
 
-    val currentWeight = currentUser?.targetWeight ?: (sortedData.lastOrNull()?.weight ?: 0f)
-    val previousWeight = sortedData.getOrNull(sortedData.size - 2)?.weight ?: currentWeight
+    val currentWeight = if (lastWeights.isNotEmpty())
+        lastWeights.last().weight
+    else
+        currentUser?.targetWeight ?: 0f
+
+    val previousWeight = if (lastWeights.size >= 2)
+        lastWeights[lastWeights.size - 2].weight
+    else
+        currentWeight
     val weightChange = currentWeight - previousWeight
 
     var showWeightDialog by remember { mutableStateOf(false) }
