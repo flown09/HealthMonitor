@@ -238,10 +238,13 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
     else
         currentUser?.targetWeight ?: 0f
 
-    val previousWeight = if (lastWeights.size >= 2)
-        lastWeights[lastWeights.size - 2].weight
-    else
+    val previousWeight = if (lastWeights.size >= 7) {
+        lastWeights[lastWeights.size - 7].weight
+    } else if (lastWeights.isNotEmpty()) {
+        lastWeights.first().weight
+    } else {
         currentWeight
+    }
 
     val weightChange = currentWeight - previousWeight
 
