@@ -64,7 +64,7 @@ fun NutritionScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
+        contentPadding = PaddingValues(top = 40.dp, bottom = 120.dp)
     ) {
         item {
             Text(
