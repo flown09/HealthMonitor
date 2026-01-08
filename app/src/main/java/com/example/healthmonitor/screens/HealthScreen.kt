@@ -423,7 +423,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
+                    .padding(vertical = 8.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -522,13 +522,13 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 40.dp, end = 40.dp, top = 8.dp),
+                            .padding(start = 40.dp, end = 40.dp, top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         chartsData.forEach { data ->
                             Text(
                                 text = formatWeight(data.weight),
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Center
