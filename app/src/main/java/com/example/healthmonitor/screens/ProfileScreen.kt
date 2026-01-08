@@ -88,7 +88,7 @@ fun UserInfoCard(user: User, onFieldClick: (String) -> Unit) {
             InfoRowClickable("Рост", "${user.heightCm} см") { onFieldClick("height") }
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
 
-            InfoRowClickable("Целевой вес", "${user.targetWeight} кг") { onFieldClick("weight") }
+            InfoRowClickable("Вес", "${user.targetWeight} кг") { onFieldClick("weight") }
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
 
             InfoRowClickable("Активность", getActivityNameShort(user.activityLevel)) { onFieldClick("activity") }
