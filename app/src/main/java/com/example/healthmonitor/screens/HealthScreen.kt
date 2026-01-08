@@ -20,14 +20,32 @@ import com.example.healthmonitor.models.HealthData
 import com.example.healthmonitor.utils.StepCounter
 import com.example.healthmonitor.viewmodels.HealthViewModel
 import kotlinx.coroutines.delay
+import java.util.Calendar
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.PaddingValues
+
 
 @Composable
 fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier: Modifier = Modifier) {
     val healthDataList by viewModel.healthDataList.collectAsState()
     val currentSteps by stepCounter.stepCount.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
-
     val refreshTrigger by viewModel._refreshTrigger.collectAsState()
+
+    var selectedDate by remember { mutableStateOf(getTodayTimestamp()) }
+
+    // Получаем сегодняшнюю дату для проверки
+    val todayTimestamp = getTodayTimestamp()
+
+    // Фильтруем данные по выбранной дате
+    val selectedDateData = remember(healthDataList, selectedDate) {
+        healthDataList.filter { it.date == selectedDate }
+    }
+
+    val todayData = selectedDateData.firstOrNull()
+
+    // Для отображения шагов берём либо выбранный день, либо текущий счётчик если это сегодня
+    val displaySteps = if (selectedDate == todayTimestamp) currentSteps else (todayData?.steps ?: 0)
 
     val stepGoal = currentUser?.dailyStepGoal ?: 10000
 
@@ -45,7 +63,7 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Карточка с шагами
+        // Карточка с шагами - теперь с переключением дат внутри
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -54,18 +72,83 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Шаги сегодня",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                // Заголовок с переключателем дат
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    // Кнопка назад (левая стрелка)
+                    IconButton(
+                        onClick = {
+                            val newCalendar = Calendar.getInstance()
+                            newCalendar.timeInMillis = selectedDate
+                            newCalendar.add(Calendar.DAY_OF_YEAR, -1)
+                            newCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                            newCalendar.set(Calendar.MINUTE, 0)
+                            newCalendar.set(Calendar.SECOND, 0)
+                            newCalendar.set(Calendar.MILLISECOND, 0)
+                            selectedDate = newCalendar.timeInMillis
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text("◄", fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Column(
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "Шаги",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = formatDateShort(selectedDate),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Кнопка вперёд (правая стрелка) - ОТКЛЮЧЕНА если это будущая дата
+                    IconButton(
+                        onClick = {
+                            val newCalendar = Calendar.getInstance()
+                            newCalendar.timeInMillis = selectedDate
+                            newCalendar.add(Calendar.DAY_OF_YEAR, 1)
+                            newCalendar.set(Calendar.HOUR_OF_DAY, 0)
+                            newCalendar.set(Calendar.MINUTE, 0)
+                            newCalendar.set(Calendar.SECOND, 0)
+                            newCalendar.set(Calendar.MILLISECOND, 0)
+
+                            // Проверяем что не переходим за текущий день
+                            if (newCalendar.timeInMillis <= todayTimestamp) {
+                                selectedDate = newCalendar.timeInMillis
+                            }
+                        },
+                        enabled = selectedDate < todayTimestamp, // Кнопка работает только если не сегодня
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text(
+                            "►",
+                            fontSize = 20.sp,
+                            color = if (selectedDate < todayTimestamp)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+
+                Divider(modifier = Modifier.fillMaxWidth())
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "$currentSteps",
+                        text = "$displaySteps",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -76,27 +159,118 @@ fun HealthScreen(viewModel: HealthViewModel, stepCounter: StepCounter, modifier:
                 }
 
                 LinearProgressIndicator(
-                    progress = { (currentSteps.toFloat() / stepGoal).coerceAtMost(1f) },
+                    progress = { (displaySteps.toFloat() / stepGoal).coerceAtMost(1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
                 )
 
                 Text(
-                    text = "${(currentSteps.toFloat() / stepGoal * 100).toInt()}% от $stepGoal",
+                    text = "${(displaySteps.toFloat() / stepGoal * 100).toInt()}% от $stepGoal",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Карточка отслеживания веса (передаем currentUser)
+        // Карточка отслеживания веса
         WeightTrackingCard(healthDataList, viewModel, currentUser)
 
-        // BMI Карточка
+        // BMI и Вода
         currentUser?.let { user ->
             BMICard(viewModel, user)
             WaterCard(viewModel, user)
+        }
+    }
+}
+
+
+fun formatDateShort(timestamp: Long): String {
+    val today = getTodayTimestamp()
+
+    return if (timestamp == today) {
+        "Сегодня"
+    } else {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = timestamp
+
+        val todayCalendar = Calendar.getInstance()
+        todayCalendar.timeInMillis = today
+
+        val sdf = if (calendar.get(Calendar.YEAR) != todayCalendar.get(Calendar.YEAR)) {
+            // Если год другой - показываем год
+            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale("ru"))
+        } else {
+            // Если год текущий - только день и месяц
+            java.text.SimpleDateFormat("dd MMM", java.util.Locale("ru"))
+        }
+
+        sdf.format(java.util.Date(timestamp))
+    }
+}
+
+
+
+
+// Новая функция переключателя дат для Health Screen
+@Composable
+fun DatePickerRowHealth(
+    selectedDate: Long,
+    onDateSelected: (Long) -> Unit
+) {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = selectedDate
+
+    val dateFormatter = remember { java.text.SimpleDateFormat("dd MMM", java.util.Locale("ru")) }
+    val dateString = remember(selectedDate) { dateFormatter.format(java.util.Date(selectedDate)) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = {
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                onDateSelected(calendar.timeInMillis)
+            },
+            modifier = Modifier
+                .height(36.dp)
+                .width(50.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("◀", fontSize = 16.sp)
+        }
+
+        Text(
+            text = dateString,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+
+        Button(
+            onClick = {
+                calendar.add(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                onDateSelected(calendar.timeInMillis)
+            },
+            modifier = Modifier
+                .height(36.dp)
+                .width(50.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("▶", fontSize = 16.sp)
         }
     }
 }
