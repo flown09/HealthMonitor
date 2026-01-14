@@ -486,7 +486,7 @@ fun WeightTrackingCard(healthDataList: List<HealthData>, viewModel: HealthViewMo
                     horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = "Изменение",
+                        text = "Изменение за неделю",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

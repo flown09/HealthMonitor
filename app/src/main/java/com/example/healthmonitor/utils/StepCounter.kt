@@ -25,7 +25,6 @@ class StepCounter(context: Context) : SensorEventListener {
     init {
         if (stepSensor != null) {
             Log.d("StepCounter", "Step sensor found: ${stepSensor.name}")
-            // Загружаем базовое значение для сегодня
             loadTodayBaseSteps()
         } else {
             Log.w("StepCounter", "Step sensor NOT found on this device")
@@ -39,10 +38,20 @@ class StepCounter(context: Context) : SensorEventListener {
         baseSteps = if (savedToday == today) {
             // Это тот же день, загружаем базовое значение
             sharedPreferences.getInt("base_steps_$today", 0)
-        } else {
-            // Новый день! Сохраняем сегодня как "последний день"
+        } else if (!savedToday.isNullOrEmpty()) {
+            // ← НОВЫЙ ДЕНЬ! Сохраняем предыдущие шаги перед сбросом
+            val previousSteps = (currentTotalSteps - sharedPreferences.getInt("base_steps_$savedToday", 0)).coerceAtLeast(0)
+            Log.d("StepCounter", "Day changed! Previous day: $savedToday had $previousSteps steps")
+
+            // Сохраняем финальное значение шагов за вчеру в SharedPreferences
+            sharedPreferences.edit().putInt("final_steps_$savedToday", previousSteps).apply()
+
+            // Обновляем текущий день
             sharedPreferences.edit().putString("last_date", today).apply()
-            // Базовое значение будет установлено при первом обновлении датчика
+            0
+        } else {
+            // Первый запуск приложения
+            sharedPreferences.edit().putString("last_date", today).apply()
             0
         }
 
@@ -79,10 +88,19 @@ class StepCounter(context: Context) : SensorEventListener {
         if (event?.sensor?.type == Sensor.TYPE_STEP_COUNTER) {
             currentTotalSteps = event.values[0].toInt()
 
+            // Проверяем смену дня
+            val today = getTodayKey()
+            val savedToday = sharedPreferences.getString("last_date", "")
+
+            if (savedToday != today && !savedToday.isNullOrEmpty()) {
+                // ← ДЕНЬ ИЗМЕНИЛСЯ! Перезагружаем базовые значения
+                Log.d("StepCounter", "Day changed detected! Reloading base steps")
+                loadTodayBaseSteps()
+            }
+
             // Если baseSteps ещё не установлен (первый запуск в этот день)
             if (baseSteps == 0 && currentTotalSteps > 0) {
                 baseSteps = currentTotalSteps
-                val today = getTodayKey()
                 sharedPreferences.edit().putInt("base_steps_$today", baseSteps).apply()
                 Log.d("StepCounter", "Set base steps: $baseSteps for today")
             }
@@ -96,5 +114,10 @@ class StepCounter(context: Context) : SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         // Ничего не делаем
+    }
+
+    // ← НОВАЯ ФУНКЦИЯ: получить финальные шаги за день
+    fun getFinalStepsForDate(dateKey: String): Int {
+        return sharedPreferences.getInt("final_steps_$dateKey", 0)
     }
 }
