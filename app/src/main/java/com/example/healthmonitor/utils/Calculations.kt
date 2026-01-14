@@ -16,12 +16,11 @@ object HealthCalculations {
     }
 
     // Базовый метаболизм (Harris-Benedict)
-    fun calculateBMR(ageDays: Int, weightKg: Float, heightCm: Float, isMale: Boolean): Float {
-        val age = ageDays / 365
+    fun calculateBMR(ageYears: Int, weightKg: Float, heightCm: Float, isMale: Boolean): Float {
         return if (isMale) {
-            88.362f + (13.397f * weightKg) + (4.799f * heightCm) - (5.677f * age)
+            88.362f + (13.397f * weightKg) + (4.799f * heightCm) - (5.677f * ageYears)
         } else {
-            447.593f + (9.247f * weightKg) + (3.098f * heightCm) - (4.330f * age)
+            447.593f + (9.247f * weightKg) + (3.098f * heightCm) - (4.330f * ageYears)
         }
     }
 
