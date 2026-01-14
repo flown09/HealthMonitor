@@ -713,8 +713,8 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         val dailyCalories = calculateDailyCalories()
 
         val proteinCalories = dailyCalories * 0.30f
-        val fatCalories = dailyCalories * 0.20f
-        val carbsCalories = dailyCalories * 0.50f
+        val fatCalories = dailyCalories * 0.30f
+        val carbsCalories = dailyCalories * 0.40f
 
         val protein = (proteinCalories / 4).toInt()
         val fat = (fatCalories / 9).toInt()
