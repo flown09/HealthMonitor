@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HealthMonitorApp(viewModel: HealthViewModel, stepCounter: StepCounter) {
-    val selectedTab = remember { mutableStateOf(0) }
+    val selectedTab = remember { mutableStateOf(2) }
 
     LaunchedEffect(Unit) {
         stepCounter.stepCount

@@ -19,7 +19,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 
-
 class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
     private val _todayMacros = MutableStateFlow(Triple(0, 0, 0))
@@ -112,29 +111,213 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                 Log.d("HealthViewModel", "Adding initial foods... (current: ${existingFoods.size})")
 
                 val initialFoods = listOf(
-                    Food(name = "Курица (грудка)", calories = 165, protein = 31f, carbs = 0f, fat = 3.6f, fiber = 0f, category = "meat"),
-                    Food(name = "Говядина (постная)", calories = 250, protein = 26f, carbs = 0f, fat = 17f, fiber = 0f, category = "meat"),
-                    Food(name = "Рыба (лосось)", calories = 208, protein = 20f, carbs = 0f, fat = 13f, fiber = 0f, category = "meat"),
-                    Food(name = "Яйцо куриное", calories = 155, protein = 13f, carbs = 1.1f, fat = 11f, fiber = 0f, category = "meat"),
-                    Food(name = "Молоко (2.5%)", calories = 54, protein = 3.3f, carbs = 4.8f, fat = 2.5f, fiber = 0f, category = "dairy"),
-                    Food(name = "Йогурт (натуральный)", calories = 59, protein = 3.5f, carbs = 3.3f, fat = 0.4f, fiber = 0f, category = "dairy"),
-                    Food(name = "Сыр (твёрдый)", calories = 402, protein = 25f, carbs = 1.3f, fat = 33f, fiber = 0f, category = "dairy"),
-                    Food(name = "Творог (5%)", calories = 121, protein = 17f, carbs = 3.3f, fat = 5f, fiber = 0f, category = "dairy"),
-                    Food(name = "Брокколи", calories = 34, protein = 2.8f, carbs = 7f, fat = 0.4f, fiber = 2.4f, category = "vegetables"),
-                    Food(name = "Морковь", calories = 41, protein = 0.9f, carbs = 10f, fat = 0.2f, fiber = 2.8f, category = "vegetables"),
-                    Food(name = "Помидор", calories = 18, protein = 0.9f, carbs = 3.9f, fat = 0.2f, fiber = 1.2f, category = "vegetables"),
-                    Food(name = "Огурец", calories = 16, protein = 0.7f, carbs = 3.6f, fat = 0.1f, fiber = 0.5f, category = "vegetables"),
-                    Food(name = "Салат (зелёный)", calories = 15, protein = 1.5f, carbs = 2.9f, fat = 0.2f, fiber = 1.3f, category = "vegetables"),
-                    Food(name = "Картофель (варёный)", calories = 77, protein = 2f, carbs = 17f, fat = 0.1f, fiber = 2.1f, category = "vegetables"),
-                    Food(name = "Банан", calories = 89, protein = 1.1f, carbs = 23f, fat = 0.3f, fiber = 2.6f, category = "fruits"),
-                    Food(name = "Яблоко", calories = 52, protein = 0.3f, carbs = 14f, fat = 0.2f, fiber = 2.4f, category = "fruits"),
-                    Food(name = "Апельсин", calories = 47, protein = 0.9f, carbs = 12f, fat = 0.1f, fiber = 2.4f, category = "fruits"),
-                    Food(name = "Ягоды (смешанные)", calories = 52, protein = 1f, carbs = 12f, fat = 0.3f, fiber = 1.7f, category = "fruits"),
-                    Food(name = "Рис (варёный)", calories = 130, protein = 2.7f, carbs = 28f, fat = 0.3f, fiber = 0.4f, category = "grains"),
-                    Food(name = "Гречка (варёная)", calories = 123, protein = 4.3f, carbs = 25f, fat = 1.1f, fiber = 2.7f, category = "grains"),
-                    Food(name = "Овсяная каша", calories = 68, protein = 2.4f, carbs = 12f, fat = 1.4f, fiber = 1.6f, category = "grains"),
-                    Food(name = "Хлеб (пшеничный)", calories = 265, protein = 8.4f, carbs = 49f, fat = 3.3f, fiber = 2.7f, category = "grains"),
-                    Food(name = "Макароны (варёные)", calories = 131, protein = 4.4f, carbs = 25f, fat = 1.1f, fiber = 1.8f, category = "grains")
+                    Food(
+                        name = "Курица (грудка)",
+                        calories = 165,
+                        protein = 31f,
+                        carbs = 0f,
+                        fat = 3.6f,
+                        fiber = 0f,
+                        category = "meat"
+                    ),
+                    Food(
+                        name = "Говядина (постная)",
+                        calories = 250,
+                        protein = 26f,
+                        carbs = 0f,
+                        fat = 17f,
+                        fiber = 0f,
+                        category = "meat"
+                    ),
+                    Food(
+                        name = "Рыба (лосось)",
+                        calories = 208,
+                        protein = 20f,
+                        carbs = 0f,
+                        fat = 13f,
+                        fiber = 0f,
+                        category = "meat"
+                    ),
+                    Food(
+                        name = "Яйцо куриное",
+                        calories = 155,
+                        protein = 13f,
+                        carbs = 1.1f,
+                        fat = 11f,
+                        fiber = 0f,
+                        category = "meat"
+                    ),
+                    Food(
+                        name = "Молоко (2.5%)",
+                        calories = 54,
+                        protein = 3.3f,
+                        carbs = 4.8f,
+                        fat = 2.5f,
+                        fiber = 0f,
+                        category = "dairy"
+                    ),
+                    Food(
+                        name = "Йогурт (натуральный)",
+                        calories = 59,
+                        protein = 3.5f,
+                        carbs = 3.3f,
+                        fat = 0.4f,
+                        fiber = 0f,
+                        category = "dairy"
+                    ),
+                    Food(
+                        name = "Сыр (твёрдый)",
+                        calories = 402,
+                        protein = 25f,
+                        carbs = 1.3f,
+                        fat = 33f,
+                        fiber = 0f,
+                        category = "dairy"
+                    ),
+                    Food(
+                        name = "Творог (5%)",
+                        calories = 121,
+                        protein = 17f,
+                        carbs = 3.3f,
+                        fat = 5f,
+                        fiber = 0f,
+                        category = "dairy"
+                    ),
+                    Food(
+                        name = "Брокколи",
+                        calories = 34,
+                        protein = 2.8f,
+                        carbs = 7f,
+                        fat = 0.4f,
+                        fiber = 2.4f,
+                        category = "vegetables"
+                    ),
+                    Food(
+                        name = "Морковь",
+                        calories = 41,
+                        protein = 0.9f,
+                        carbs = 10f,
+                        fat = 0.2f,
+                        fiber = 2.8f,
+                        category = "vegetables"
+                    ),
+                    Food(
+                        name = "Помидор",
+                        calories = 18,
+                        protein = 0.9f,
+                        carbs = 3.9f,
+                        fat = 0.2f,
+                        fiber = 1.2f,
+                        category = "vegetables"
+                    ),
+                    Food(
+                        name = "Огурец",
+                        calories = 16,
+                        protein = 0.7f,
+                        carbs = 3.6f,
+                        fat = 0.1f,
+                        fiber = 0.5f,
+                        category = "vegetables"
+                    ),
+                    Food(
+                        name = "Салат (зелёный)",
+                        calories = 15,
+                        protein = 1.5f,
+                        carbs = 2.9f,
+                        fat = 0.2f,
+                        fiber = 1.3f,
+                        category = "vegetables"
+                    ),
+                    Food(
+                        name = "Картофель (варёный)",
+                        calories = 77,
+                        protein = 2f,
+                        carbs = 17f,
+                        fat = 0.1f,
+                        fiber = 2.1f,
+                        category = "vegetables"
+                    ),
+                    Food(
+                        name = "Банан",
+                        calories = 89,
+                        protein = 1.1f,
+                        carbs = 23f,
+                        fat = 0.3f,
+                        fiber = 2.6f,
+                        category = "fruits"
+                    ),
+                    Food(
+                        name = "Яблоко",
+                        calories = 52,
+                        protein = 0.3f,
+                        carbs = 14f,
+                        fat = 0.2f,
+                        fiber = 2.4f,
+                        category = "fruits"
+                    ),
+                    Food(
+                        name = "Апельсин",
+                        calories = 47,
+                        protein = 0.9f,
+                        carbs = 12f,
+                        fat = 0.1f,
+                        fiber = 2.4f,
+                        category = "fruits"
+                    ),
+                    Food(
+                        name = "Ягоды (смешанные)",
+                        calories = 52,
+                        protein = 1f,
+                        carbs = 12f,
+                        fat = 0.3f,
+                        fiber = 1.7f,
+                        category = "fruits"
+                    ),
+                    Food(
+                        name = "Рис (варёный)",
+                        calories = 130,
+                        protein = 2.7f,
+                        carbs = 28f,
+                        fat = 0.3f,
+                        fiber = 0.4f,
+                        category = "grains"
+                    ),
+                    Food(
+                        name = "Гречка (варёная)",
+                        calories = 123,
+                        protein = 4.3f,
+                        carbs = 25f,
+                        fat = 1.1f,
+                        fiber = 2.7f,
+                        category = "grains"
+                    ),
+                    Food(
+                        name = "Овсяная каша",
+                        calories = 68,
+                        protein = 2.4f,
+                        carbs = 12f,
+                        fat = 1.4f,
+                        fiber = 1.6f,
+                        category = "grains"
+                    ),
+                    Food(
+                        name = "Хлеб (пшеничный)",
+                        calories = 265,
+                        protein = 8.4f,
+                        carbs = 49f,
+                        fat = 3.3f,
+                        fiber = 2.7f,
+                        category = "grains"
+                    ),
+                    Food(
+                        name = "Макароны (варёные)",
+                        calories = 131,
+                        protein = 4.4f,
+                        carbs = 25f,
+                        fat = 1.1f,
+                        fiber = 1.8f,
+                        category = "grains"
+                    )
                 )
 
                 Log.d("HealthViewModel", "Total foods to insert: ${initialFoods.size}")
@@ -159,7 +342,6 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             Log.e("HealthViewModel", "Error initializing foods: ${e.message}", e)
         }
     }
-
 
 
     private fun createDefaultUser() {
@@ -200,6 +382,49 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
+    fun updateCurrentWeight(newWeight: Float) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val today = getTodayTimestamp()
+                val userId = _currentUser.value?.id ?: "user_1"
+
+                // Обновляем targetWeight в профиле
+                val updatedUser = _currentUser.value?.copy(targetWeight = newWeight)
+                if (updatedUser != null) {
+                    repository.updateUser(updatedUser)
+                    _currentUser.value = updatedUser
+                }
+
+                // Проверяем есть ли запись за сегодня
+                val existingToday = _healthDataList.value.find { it.date == today && it.weight > 0 }
+
+                if (existingToday != null) {
+                    // Обновляем существующую запись
+                    repository.updateHealthData(existingToday.copy(weight = newWeight))
+                } else {
+                    // Создаём новую запись за сегодня с только весом
+                    val newHealthData = HealthData(
+                        userId = userId,
+                        date = today,
+                        weight = newWeight,
+                        heartRate = 0,
+                        bloodPressureSystolic = 0,
+                        bloodPressureDiastolic = 0,
+                        steps = 0,
+                        sleepHours = 0f,
+                        waterIntakeL = 0f
+                    )
+                    repository.insertHealthData(newHealthData)
+                }
+
+                // Перезагружаем данные
+                loadHealthData(userId)
+                Log.d("HealthViewModel", "Updated weight to: $newWeight")
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error updating weight: ${e.message}")
+            }
+        }
+    }
 
 
     private fun loadNutritionData(userId: String) {
@@ -242,7 +467,10 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                Log.d("HealthViewModel", "Adding health data with weight: $weight for date: $dateTimestamp")
+                Log.d(
+                    "HealthViewModel",
+                    "Adding health data with weight: $weight for date: $dateTimestamp"
+                )
 
                 val healthData = HealthData(
                     userId = _currentUser.value?.id ?: "user_1",
@@ -332,7 +560,12 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     }
 
 
-    fun addNutritionData(food: Food, portionGrams: Float, mealType: String, dateTimestamp: Long = getTodayTimestamp()) {
+    fun addNutritionData(
+        food: Food,
+        portionGrams: Float,
+        mealType: String,
+        dateTimestamp: Long = getTodayTimestamp()
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val caloriesForPortion = (food.calories * portionGrams) / 100
@@ -361,9 +594,14 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
     }
 
 
-
-
-    fun addFood(name: String, calories: Int, protein: Float, carbs: Float, fat: Float, category: String) {
+    fun addFood(
+        name: String,
+        calories: Int,
+        protein: Float,
+        carbs: Float,
+        fat: Float,
+        category: String
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val newFood = Food(
@@ -402,7 +640,10 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         val lastHealth = _healthDataList.value.filter { it.weight > 0 }.lastOrNull()
         val weight = lastHealth?.weight ?: user.targetWeight
 
-        Log.d("HealthViewModel", "BMR calculation - weight: $weight, age: ${user.age}, height: ${user.heightCm}")
+        Log.d(
+            "HealthViewModel",
+            "BMR calculation - weight: $weight, age: ${user.age}, height: ${user.heightCm}"
+        )
 
         val bmr = HealthCalculations.calculateBMR(
             user.age,
@@ -413,7 +654,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
         Log.d("HealthViewModel", "BMR: $bmr")
 
-        val multiplier = when(user.activityLevel) {
+        val multiplier = when (user.activityLevel) {
             "sedentary" -> 1.2f
             "light" -> 1.375f
             "moderate" -> 1.55f
@@ -426,7 +667,7 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
         Log.d("HealthViewModel", "Daily calories: $dailyCalories (multiplier: $multiplier)")
 
-        return when(user.weightGoal) {
+        return when (user.weightGoal) {
             "lose" -> (dailyCalories * 0.85f).toInt()
             "maintain" -> dailyCalories.toInt()
             "gain" -> (dailyCalories * 1.15f).toInt()
@@ -460,7 +701,17 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
             }
         }
     }
-    fun updateUser(name: String, gender: String, age: Int, heightCm: Float, targetWeight: Float, activityLevel: String, weightGoal: String, dailyStepGoal: Int) {
+
+    fun updateUser(
+        name: String,
+        gender: String,
+        age: Int,
+        heightCm: Float,
+        targetWeight: Float,
+        activityLevel: String,
+        weightGoal: String,
+        dailyStepGoal: Int
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val updatedUser = _currentUser.value?.copy(
@@ -498,7 +749,8 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
 
                 // ← ДОБАВЬ ЭТО: если удалили запись с весом, обновляем профиль
                 if (healthData.weight > 0) {
-                    val allWeightData = _healthDataList.value.filter { it.weight > 0 }.sortedBy { it.date }
+                    val allWeightData =
+                        _healthDataList.value.filter { it.weight > 0 }.sortedBy { it.date }
 
                     if (allWeightData.isNotEmpty()) {
                         // Есть другие записи - берём последнюю
@@ -508,11 +760,17 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
                             val updatedUser = currentUser.copy(targetWeight = lastWeight)
                             repository.updateUser(updatedUser)
                             _currentUser.value = updatedUser
-                            Log.d("HealthViewModel", "Updated targetWeight to: $lastWeight after deletion")
+                            Log.d(
+                                "HealthViewModel",
+                                "Updated targetWeight to: $lastWeight after deletion"
+                            )
                         }
                     } else {
                         // Нет других записей - оставляем старый targetWeight
-                        Log.d("HealthViewModel", "No more weight records, keeping current targetWeight")
+                        Log.d(
+                            "HealthViewModel",
+                            "No more weight records, keeping current targetWeight"
+                        )
                     }
                 }
             } catch (e: Exception) {

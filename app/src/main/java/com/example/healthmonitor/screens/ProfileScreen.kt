@@ -50,17 +50,24 @@ fun ProfileScreen(viewModel: HealthViewModel, modifier: Modifier = Modifier) {
         EditProfileDialog(
             user = currentUser!!,
             editingField = editingField,
+            viewModel = viewModel,  // ← ДОБАВЬ ЭТО
             onDismiss = {
                 showEditDialog = false
                 editingField = null
             },
             onSave = { name, gender, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal ->
-                viewModel.updateUser(name, gender, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal)
+                // Если редактировали вес - используй updateCurrentWeight
+                if (editingField == "weight") {
+                    viewModel.updateCurrentWeight(targetWeight)
+                } else {
+                    viewModel.updateUser(name, gender, age, heightCm, targetWeight, activityLevel, weightGoal, stepGoal)
+                }
                 showEditDialog = false
                 editingField = null
             }
         )
     }
+
 }
 
 @Composable
@@ -88,7 +95,7 @@ fun UserInfoCard(user: User, onFieldClick: (String) -> Unit) {
             InfoRowClickable("Рост", "${user.heightCm} см") { onFieldClick("height") }
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
 
-            InfoRowClickable("Целевой вес", "${user.targetWeight} кг") { onFieldClick("weight") }
+            InfoRowClickable("Вес", "${user.targetWeight} кг") { onFieldClick("weight") }
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
 
             InfoRowClickable("Активность", getActivityNameShort(user.activityLevel)) { onFieldClick("activity") }
@@ -141,6 +148,7 @@ fun InfoRowClickable(label: String, value: String, onClick: () -> Unit) {
 fun EditProfileDialog(
     user: User,
     editingField: String?,
+    viewModel: HealthViewModel,
     onDismiss: () -> Unit,
     onSave: (String, String, Int, Float, Float, String, String, Int) -> Unit
 ) {
@@ -277,16 +285,33 @@ fun EditProfileDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(
-                        nameVal,
-                        genderVal,
-                        ageVal.toIntOrNull() ?: user.age,
-                        heightVal.toFloatOrNull() ?: user.heightCm,
-                        targetWeightVal.toFloatOrNull() ?: user.targetWeight,
-                        activityVal,
-                        weightGoalVal,
-                        stepGoalVal.toIntOrNull() ?: user.dailyStepGoal
-                    )
+                    // Если меняли вес - используй специальную функцию
+                    if (editingField == "weight") {
+                        val newWeight = targetWeightVal.toFloatOrNull() ?: user.targetWeight
+                        // Вызываем функцию которая создаёт запись в healthDataList
+                        // (Но нужно передать viewModel в параметр функции)
+                        onSave(
+                            nameVal,
+                            genderVal,
+                            ageVal.toIntOrNull() ?: user.age,
+                            heightVal.toFloatOrNull() ?: user.heightCm,
+                            newWeight,
+                            activityVal,
+                            weightGoalVal,
+                            stepGoalVal.toIntOrNull() ?: user.dailyStepGoal
+                        )
+                    } else {
+                        onSave(
+                            nameVal,
+                            genderVal,
+                            ageVal.toIntOrNull() ?: user.age,
+                            heightVal.toFloatOrNull() ?: user.heightCm,
+                            targetWeightVal.toFloatOrNull() ?: user.targetWeight,
+                            activityVal,
+                            weightGoalVal,
+                            stepGoalVal.toIntOrNull() ?: user.dailyStepGoal
+                        )
+                    }
                 }
             ) {
                 Text("Сохранить")
