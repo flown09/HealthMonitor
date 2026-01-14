@@ -382,6 +382,40 @@ class HealthViewModel(private val repository: HealthRepository) : ViewModel() {
         }
     }
 
+    fun saveStepsForDate(steps: Int, dateTimestamp: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val userId = _currentUser.value?.id ?: "user_1"
+                val existing = _healthDataList.value.find { it.date == dateTimestamp }
+
+                if (existing != null) {
+                    // Обновляем шаги
+                    repository.updateHealthData(existing.copy(steps = steps))
+                } else if (steps > 0) {
+                    // Создаём новую запись
+                    val healthData = HealthData(
+                        userId = userId,
+                        date = dateTimestamp,
+                        weight = 0f,
+                        heartRate = 0,
+                        bloodPressureSystolic = 0,
+                        bloodPressureDiastolic = 0,
+                        steps = steps,
+                        sleepHours = 0f,
+                        waterIntakeL = 0f
+                    )
+                    repository.insertHealthData(healthData)
+                }
+
+                loadHealthData(userId)
+                Log.d("HealthViewModel", "Saved $steps steps for date $dateTimestamp")
+            } catch (e: Exception) {
+                Log.e("HealthViewModel", "Error saving steps for date: ${e.message}")
+            }
+        }
+    }
+
+
     fun updateCurrentWeight(newWeight: Float) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

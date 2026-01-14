@@ -39,6 +39,7 @@ import com.example.healthmonitor.viewmodels.HealthViewModel
 import com.example.healthmonitor.viewmodels.HealthViewModelFactory
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
     private lateinit var stepCounter: StepCounter
@@ -113,9 +114,27 @@ fun HealthMonitorApp(viewModel: HealthViewModel, stepCounter: StepCounter) {
     LaunchedEffect(Unit) {
         stepCounter.stepCount
             .onEach { steps ->
+                Log.d("HealthMonitorApp", "Steps flow emitted: $steps")
                 viewModel.saveTodayStepsToDatabase(steps)
             }
             .launchIn(this)
+    }
+
+    // ← ДОБАВЬ: При инициализации проверяем вчерашние шаги
+    LaunchedEffect(Unit) {
+        // Получаем вчерашнюю дату
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+        val yesterday = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.MONTH)}-${calendar.get(Calendar.DAY_OF_MONTH)}"
+
+        val yesterdaySteps = stepCounter.getFinalStepsForDate(yesterday)
+        if (yesterdaySteps > 0) {
+            Log.d("HealthMonitorApp", "Found yesterday steps: $yesterdaySteps, saving to DB")
+
+            // Получаем timestamp вчерашнего дня
+            val yesterdayTimestamp = getTodayTimestampForDate(calendar.timeInMillis)
+            viewModel.saveStepsForDate(yesterdaySteps, yesterdayTimestamp)
+        }
     }
 
     Scaffold(
@@ -148,4 +167,15 @@ fun HealthMonitorApp(viewModel: HealthViewModel, stepCounter: StepCounter) {
             2 -> HealthScreen(viewModel = viewModel, stepCounter = stepCounter, modifier = Modifier.padding(paddingValues))
         }
     }
+}
+
+// ← ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ
+fun getTodayTimestampForDate(dateMillis: Long): Long {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = dateMillis
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    return calendar.timeInMillis
 }
